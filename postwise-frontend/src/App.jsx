@@ -9,7 +9,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import SiteOverviewPage from './pages/SiteOverviewPage';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('analyze'); // default tab can be dashboard
+  const [activeTab, setActiveTab] = useState('overview'); // default tab can be dashboard
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -4,13 +4,12 @@ import { Sparkles, BarChart3, Wand2, Calendar, PieChart, LayoutDashboard, Home, 
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'home', label: 'Home', icon: Home },
+    { id: 'overview', label: 'Home' }, 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'analyze', label: 'Analyze', icon: BarChart3 },
     { id: 'improve', label: 'Improve', icon: Wand2 },
     { id: 'plan', label: 'Plan', icon: Calendar },
     { id: 'analytics', label: 'Analytics', icon: PieChart },
-    { id: 'overview', label: 'Site Overview' },
     { id: 'login', label: 'Login', icon: LogIn }
   ];
 
@@ -26,14 +25,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
           >
             <motion.div
               className="relative"
-              animate={{
-                rotate: [0, 360],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear"
-              }}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
             >
               <Sparkles className="w-8 h-8 text-sky-500" />
             </motion.div>
@@ -47,15 +40,13 @@ export default function Navbar({ activeTab, setActiveTab }) {
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-              
+
               return (
                 <motion.button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`relative px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-sm ${
-                    isActive
-                      ? 'text-white shadow-lg'
-                      : 'text-slate-600 hover:text-sky-600'
+                    isActive ? 'text-white shadow-lg' : 'text-slate-600 hover:text-sky-600'
                   }`}
                   whileHover={{ scale: isActive ? 1 : 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -65,17 +56,13 @@ export default function Navbar({ activeTab, setActiveTab }) {
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl"
                       layoutId="activeTab"
-                      transition={{
-                        type: "spring",
-                        stiffness: 380,
-                        damping: 30
-                      }}
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     />
                   )}
-                  
+
                   {/* Icon and Label */}
                   <span className="relative z-10 flex items-center gap-2">
-                    <Icon className="w-4 h-4" />
+                    {Icon && <Icon className="w-4 h-4" />}
                     {tab.label}
                   </span>
                 </motion.button>
