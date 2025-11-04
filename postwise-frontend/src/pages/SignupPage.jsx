@@ -1,23 +1,46 @@
-// src/pages/LoginPage.jsx
+// src/pages/SignupPage.jsx
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, provider } from '../firebase';
+import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, provider, db } from '../firebase';
 
-const LoginPage = () => {
+const SignupPage = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleEmailLogin = async (e) => {
+  const createUserDocument = async (user, displayName) => {
+    const userRef = doc(db, 'users', user.uid);
+    await setDoc(userRef, {
+      uid: user.uid,
+      name: displayName || user.displayName,
+      email: user.email,
+      photoURL: user.photoURL || null,
+      plan: 'free',
+      createdAt: serverTimestamp()
+    });
+  };
+
+  const handleEmailSignup = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update user profile with name
+      await updateProfile(userCredential.user, {
+        displayName: name
+      });
+
+      // Create user document in Firestore
+      await createUserDocument(userCredential.user, name);
+
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -26,12 +49,16 @@ const LoginPage = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignup = async () => {
     setError('');
     setLoading(true);
 
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Create user document in Firestore
+      await createUserDocument(result.user);
+
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -44,8 +71,8 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to continue to your account</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+          <p className="text-gray-600">Sign up to get started</p>
         </div>
 
         {error && (
@@ -54,7 +81,21 @@ const LoginPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleEmailLogin} className="space-y-4">
+        <form onSubmit={handleEmailSignup} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="John Doe"
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email
@@ -80,7 +121,11 @@ const LoginPage = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="••••••••"
               required
+              minLength={6}
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Password must be at least 6 characters
+            </p>
           </div>
 
           <button
@@ -88,7 +133,7 @@ const LoginPage = () => {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
@@ -99,7 +144,7 @@ const LoginPage = () => {
         </div>
 
         <button
-          onClick={handleGoogleLogin}
+          onClick={handleGoogleSignup}
           disabled={loading}
           className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-lg border-2 border-gray-300 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -121,16 +166,16 @@ const LoginPage = () => {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          Sign in with Google
+          Sign up with Google
         </button>
 
         <p className="mt-8 text-center text-sm text-gray-600">
-          Don't have an account?{' '}
+          Already have an account?{' '}
           <Link
-            to="/signup"
+            to="/login"
             className="text-blue-600 hover:text-blue-700 font-semibold"
           >
-            Sign up
+            Sign in
           </Link>
         </p>
       </div>
@@ -138,4 +183,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default SignupPage;

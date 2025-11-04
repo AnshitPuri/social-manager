@@ -4,12 +4,11 @@ import { Sparkles, BarChart3, Wand2, Calendar, PieChart, LayoutDashboard, Home, 
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'overview', label: 'Home' }, 
+    { id: 'overview', label: 'Admin' }, 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'analyze', label: 'Analyze', icon: BarChart3 },
     { id: 'improve', label: 'Improve', icon: Wand2 },
     { id: 'plan', label: 'Plan', icon: Calendar },
-    { id: 'analytics', label: 'Analytics', icon: PieChart },
     { id: 'login', label: 'Login', icon: LogIn }
   ];
 

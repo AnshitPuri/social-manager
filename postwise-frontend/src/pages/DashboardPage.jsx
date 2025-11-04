@@ -3,7 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, TrendingUp, BarChart3, FileText, Instagram, Twitter, Facebook, Linkedin, Youtube, Eye, RefreshCw, Sparkles, Loader2, Heart, MessageCircle, Share2, Clock } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
-// Mock API functions (replace with actual API calls)
+// --- MOCK AUTHENTICATION CONTEXT ---
+// This mock hook simulates the presence of an AuthContext for a self-contained file.
+const useAuth = () => {
+  const user = {
+    displayName: "Content Creator", // Used in the greeting
+    email: "creator@postwise.ai",
+    uid: "pw-user-7890-a7b3-c1d5",
+  };
+  return { user };
+};
+
+// --- MOCK API FUNCTIONS (replace with actual API calls) ---
 const fetchOverallStats = async () => {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return {
@@ -116,7 +127,9 @@ const fetchRecentActivity = async () => {
   ];
 };
 
-// Animated Counter Component
+// --- HELPER COMPONENTS ---
+
+// Animated Counter Component for dynamic numerical display
 const AnimatedCounter = ({ value, duration = 2000 }) => {
   const [count, setCount] = useState(0);
 
@@ -128,7 +141,8 @@ const AnimatedCounter = ({ value, duration = 2000 }) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
       
-      setCount(Math.floor(progress * value));
+      // Use the actual value when animation is complete, otherwise interpolate
+      setCount(progress < 1 ? Math.floor(progress * value) : value);
 
       if (progress < 1) {
         animationFrame = requestAnimationFrame(animate);
@@ -139,13 +153,16 @@ const AnimatedCounter = ({ value, duration = 2000 }) => {
     return () => cancelAnimationFrame(animationFrame);
   }, [value, duration]);
 
-  return <span>{count.toLocaleString()}</span>;
+  // Format the number or keep the fixed-point string if it contains a decimal
+  const formattedValue = typeof value === 'number' ? count.toLocaleString() : count.toFixed(1);
+
+  return <span>{formattedValue}</span>;
 };
 
-// Stats Card Component
+// Stats Card Component for key metrics
 const StatsCard = ({ icon: Icon, title, value, subtitle, delay }) => (
   <motion.div
-    className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
+    className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer"
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.6, delay }}
@@ -156,10 +173,10 @@ const StatsCard = ({ icon: Icon, title, value, subtitle, delay }) => (
       <Icon className="w-6 h-6 text-sky-500" />
     </div>
     <motion.div
-      className="text-4xl font-bold text-sky-600 mb-1"
+      className="text-4xl font-extrabold text-sky-700 mb-1"
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
-      transition={{ delay: delay + 0.2, type: "spring" }}
+      transition={{ delay: delay + 0.2, type: "spring", stiffness: 150 }}
     >
       <AnimatedCounter value={value} />
       {subtitle === '%' && '%'}
@@ -170,22 +187,23 @@ const StatsCard = ({ icon: Icon, title, value, subtitle, delay }) => (
   </motion.div>
 );
 
-// Account Card Component
+// Account Card Component for platform-specific data
 const AccountCard = ({ account, delay }) => {
   const Icon = account.icon;
+  // Recharts requires data in an array of objects
   const trendData = account.trend.map((value, index) => ({ value, index }));
 
   return (
     <motion.div
-      className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
+      className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-lg cursor-pointer"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, delay }}
-      whileHover={{ scale: 1.02, y: -5 }}
+      whileHover={{ scale: 1.02, y: -5, shadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`p-3 rounded-xl bg-gradient-to-br ${account.color} shadow-md`}>
+          <div className={`p-3 rounded-xl bg-gradient-to-br ${account.color} shadow-lg`}>
             <Icon className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -199,23 +217,23 @@ const AccountCard = ({ account, delay }) => {
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-white/60 rounded-xl p-3 border border-sky-100">
+        <div className="bg-white rounded-xl p-3 border border-sky-100 text-center">
           <p className="text-xs text-slate-500 mb-1 font-semibold">Followers</p>
           <p className="text-lg font-bold text-sky-600">{(account.followers / 1000).toFixed(1)}K</p>
         </div>
-        <div className="bg-white/60 rounded-xl p-3 border border-sky-100">
+        <div className="bg-white rounded-xl p-3 border border-sky-100 text-center">
           <p className="text-xs text-slate-500 mb-1 font-semibold">Engagement</p>
           <p className="text-lg font-bold text-sky-600">{account.engagement}%</p>
         </div>
-        <div className="bg-white/60 rounded-xl p-3 border border-sky-100">
+        <div className="bg-white rounded-xl p-3 border border-sky-100 text-center">
           <p className="text-xs text-slate-500 mb-1 font-semibold">Posts</p>
           <p className="text-lg font-bold text-sky-600">{account.posts}</p>
         </div>
       </div>
 
-      <div className="h-16 bg-white/60 rounded-xl p-3 border border-sky-100">
+      <div className="h-16 bg-white rounded-xl p-3 border border-sky-100">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={trendData}>
+          <LineChart data={trendData} margin={{ top: 5, right: 0, bottom: 5, left: 0 }}>
             <Line 
               type="monotone" 
               dataKey="value" 
@@ -225,12 +243,13 @@ const AccountCard = ({ account, delay }) => {
             />
           </LineChart>
         </ResponsiveContainer>
+        <p className="text-xs text-slate-400 text-center mt-1">6-month engagement trend</p>
       </div>
     </motion.div>
   );
 };
 
-// Activity Card Component
+// Activity Card Component for recent posts and metrics
 const ActivityCard = ({ activity, delay }) => {
   const Icon = activity.icon;
 
@@ -240,16 +259,16 @@ const ActivityCard = ({ activity, delay }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
-      whileHover={{ scale: 1.01, y: -3 }}
+      whileHover={{ scale: 1.01, y: -3, shadow: '0 5px 10px -3px rgba(0, 0, 0, 0.1)' }}
     >
       <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 shadow-md flex-shrink-0`}>
+        <div className={`p-3 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 shadow-md flex-shrink-0`}>
           <Icon className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1">
           <p className="text-slate-800 font-semibold mb-3 leading-relaxed">{activity.caption}</p>
           
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-4 border-b pb-4 border-sky-100">
             <div className="flex items-center gap-1.5 text-slate-600">
               <Heart className="w-4 h-4 text-rose-500" />
               <span className="text-sm font-semibold">{activity.likes.toLocaleString()}</span>
@@ -264,18 +283,18 @@ const ActivityCard = ({ activity, delay }) => {
             </div>
             <div className="flex items-center gap-1.5 text-slate-400 ml-auto">
               <Clock className="w-4 h-4" />
-              <span className="text-xs">{activity.timestamp}</span>
+              <span className="text-xs font-medium">{activity.timestamp}</span>
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <motion.button 
               className="px-4 py-2 bg-white border-2 border-sky-200 text-sky-600 font-semibold rounded-xl text-sm hover:bg-sky-50 transition-all duration-300 flex items-center gap-2"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <Eye className="w-4 h-4" />
-              View
+              View Post
             </motion.button>
             <motion.button 
               className="px-4 py-2 bg-white border-2 border-sky-200 text-sky-600 font-semibold rounded-xl text-sm hover:bg-sky-50 transition-all duration-300 flex items-center gap-2"
@@ -283,7 +302,7 @@ const ActivityCard = ({ activity, delay }) => {
               whileTap={{ scale: 0.95 }}
             >
               <RefreshCw className="w-4 h-4" />
-              Analyze
+              Re-Analyze
             </motion.button>
             <motion.button 
               className="px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-semibold rounded-xl text-sm hover:from-sky-600 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 shadow-md"
@@ -291,7 +310,7 @@ const ActivityCard = ({ activity, delay }) => {
               whileTap={{ scale: 0.95 }}
             >
               <Sparkles className="w-4 h-4" />
-              Improve
+              Improve Content
             </motion.button>
           </div>
         </div>
@@ -311,8 +330,9 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-// Main Dashboard Component
+// --- MAIN DASHBOARD COMPONENT ---
 const DashboardPage = () => {
+  const { user } = useAuth(); // Integrated Auth
   const [overallStats, setOverallStats] = useState(null);
   const [accounts, setAccounts] = useState(null);
   const [activities, setActivities] = useState(null);
@@ -340,147 +360,123 @@ const DashboardPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-white py-12 px-4 relative overflow-hidden">
-      {/* Animated background elements */}
+    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-white py-12 px-4 relative overflow-hidden font-sans">
+      
+      {/* Animated background elements (framer-motion) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          className="absolute top-20 left-10 w-72 h-72 bg-sky-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          className="absolute top-20 left-10 w-72 h-72 bg-sky-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
+          animate={{ x: [0, 150, 0], y: [0, 80, 0], rotate: [0, 360] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"
+          animate={{ x: [0, -150, 0], y: [0, -80, 0], rotate: [360, 0] }}
+          transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header */}
+        
+        {/* Header and Welcome Message */}
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-12 bg-white/50 backdrop-blur-sm p-6 rounded-3xl shadow-xl border border-sky-200"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <motion.div
-            className="inline-flex items-center justify-center gap-3 mb-4"
-            animate={{
-              scale: [1, 1.02, 1],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
+          <div className="flex flex-col items-center justify-center gap-3">
             <motion.div
-              animate={{
-                rotate: [0, 360],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear"
-              }}
+              className="inline-flex items-center"
+              animate={{ scale: [1, 1.01, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             >
-              <BarChart3 className="w-10 h-10 text-sky-500" />
+              <BarChart3 className="w-10 h-10 text-sky-500 mr-3" />
+              <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
+                Social Media Dashboard
+              </h1>
             </motion.div>
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
-              Social Media Dashboard
-            </h1>
-          </motion.div>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Monitor your social media performance and engagement in real-time
-          </p>
+            <h2 className="text-2xl font-semibold text-slate-800 mt-4">
+               Welcome back, {user?.displayName || 'User'}! 👋
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Monitor your social media performance and engagement in real-time.
+            </p>
+          </div>
         </motion.div>
 
         {/* Overall Stats */}
-        <motion.div
-          className="mb-8"
+        <motion.section
+          className="mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <h2 className="text-2xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-slate-700 mb-6 flex items-center gap-2 border-b-2 border-sky-200 pb-2">
             <TrendingUp className="w-6 h-6 text-sky-500" />
-            Overview
+            Performance Overview
           </h2>
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[...Array(4)].map((_, i) => <LoadingSkeleton key={i} />)}
             </div>
           ) : overallStats ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatsCard
                 icon={Users}
                 title="Connected Accounts"
                 value={overallStats.totalAccounts}
                 subtitle="Active platforms"
-                delay={0}
+                delay={0.4}
               />
               <StatsCard
                 icon={TrendingUp}
                 title="Total Followers"
                 value={overallStats.totalFollowers}
                 subtitle="Across all platforms"
-                delay={0.1}
+                delay={0.5}
               />
               <StatsCard
                 icon={BarChart3}
                 title="Avg Engagement"
                 value={overallStats.avgEngagement}
                 subtitle="%"
-                delay={0.2}
+                delay={0.6}
               />
               <StatsCard
                 icon={FileText}
                 title="Posts Analyzed"
                 value={overallStats.totalPosts}
                 subtitle="Total posts"
-                delay={0.3}
+                delay={0.7}
               />
             </div>
           ) : (
             <div className="text-center text-red-500 p-4 bg-red-50 rounded-2xl border border-red-200">
-              Failed to load stats
+              Failed to load overall stats
             </div>
           )}
-        </motion.div>
+        </motion.section>
 
         {/* Connected Accounts */}
-        <motion.div
-          className="mb-8"
+        <motion.section
+          className="mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
         >
-          <h2 className="text-2xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-slate-700 mb-6 flex items-center gap-2 border-b-2 border-sky-200 pb-2">
             <Users className="w-6 h-6 text-sky-500" />
-            Connected Accounts
+            Platform Deep Dive
           </h2>
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(3)].map((_, i) => <LoadingSkeleton key={i} />)}
             </div>
           ) : accounts ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {accounts.map((account, index) => (
-                <AccountCard key={account.id} account={account} delay={index * 0.1} />
+                <AccountCard key={account.id} account={account} delay={0.9 + index * 0.1} />
               ))}
             </div>
           ) : (
@@ -488,26 +484,26 @@ const DashboardPage = () => {
               Failed to load accounts
             </div>
           )}
-        </motion.div>
+        </motion.section>
 
         {/* Recent Activity */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ duration: 0.6, delay: 1.2 }}
         >
-          <h2 className="text-2xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-slate-700 mb-6 flex items-center gap-2 border-b-2 border-sky-200 pb-2">
             <Sparkles className="w-6 h-6 text-sky-500" />
-            Recent Activity
+            Recent Content & Activity
           </h2>
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {[...Array(3)].map((_, i) => <LoadingSkeleton key={i} />)}
             </div>
           ) : activities ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {activities.map((activity, index) => (
-                <ActivityCard key={activity.id} activity={activity} delay={index * 0.1} />
+                <ActivityCard key={activity.id} activity={activity} delay={1.3 + index * 0.1} />
               ))}
             </div>
           ) : (
@@ -515,7 +511,7 @@ const DashboardPage = () => {
               Failed to load activities
             </div>
           )}
-        </motion.div>
+        </motion.section>
       </div>
     </div>
   );

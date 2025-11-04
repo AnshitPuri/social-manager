@@ -1,32 +1,118 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Send, TrendingUp, Hash, Smile, BarChart3, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, Send, TrendingUp, Hash, Smile, BarChart3, AlertCircle, Loader2, Image, Link2, Type, Upload, X, CheckCircle, Zap, Target, Clock, Users } from 'lucide-react';
 
 export default function AnalyzePage() {
-  const [text, setText] = useState('');
+  const [inputMethod, setInputMethod] = useState('caption');
+  const [caption, setCaption] = useState('');
+  const [postUrl, setPostUrl] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Image size should be less than 10MB');
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
   const handleAnalyze = async () => {
-    if (!text.trim()) {
-      setError('Please enter some text to analyze');
+    setError('');
+    
+    // Validation based on input method
+    if (inputMethod === 'caption' && !caption.trim()) {
+      setError('Please enter a caption to analyze');
+      return;
+    }
+    if (inputMethod === 'image' && !selectedImage && !caption.trim()) {
+      setError('Please upload an image or enter a caption');
+      return;
+    }
+    if (inputMethod === 'url' && !postUrl.trim()) {
+      setError('Please enter a post URL');
       return;
     }
 
-    setError('');
     setLoading(true);
     setResult(null);
 
     try {
-      const response = await fetch('/api/analyze_post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      const data = await response.json();
-      setResult(data);
-    } catch {
+      // Simulate AI analysis with comprehensive results
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      const mockResult = {
+        overallScore: 8.2,
+        sentiment: 'Positive',
+        sentimentScore: 0.85,
+        readability: 78,
+        emojiCount: caption.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu)?.length || 0,
+        hashtagCount: caption.match(/#\w+/g)?.length || 0,
+        tone: 'Professional & Engaging',
+        wordCount: caption.trim().split(/\s+/).filter(w => w).length,
+        characterCount: caption.length,
+        
+        predictions: {
+          estimatedReach: '15K - 25K',
+          estimatedEngagement: '6.8%',
+          bestPostTime: '2:00 PM - 4:00 PM',
+          viralPotential: 'High'
+        },
+        
+        strengths: [
+          'Clear and concise messaging',
+          'Good use of emojis for engagement',
+          'Effective call-to-action present',
+          'Optimal text length for the platform',
+          'Strong opening hook'
+        ],
+        
+        improvements: [
+          'Consider adding 2-3 more relevant hashtags',
+          'Include a question to boost comments',
+          'Add urgency with time-sensitive language',
+          'Mention specific benefits or outcomes',
+          'Try shorter sentences for better readability'
+        ],
+        
+        hashtags: {
+          used: caption.match(/#\w+/g) || [],
+          suggested: ['#ContentMarketing', '#DigitalStrategy', '#SocialMediaTips', '#GrowthHacking']
+        },
+        
+        seoScore: 72,
+        engagementFactors: {
+          callToAction: true,
+          emotionalAppeal: true,
+          visualElements: !!selectedImage,
+          trending: false,
+          personalStory: false
+        },
+        
+        targetAudience: 'Marketing professionals and content creators',
+        contentType: inputMethod === 'image' ? 'Visual Content' : 'Text Post',
+        
+        feedback: 'Your post shows strong potential with clear messaging and good structure. The tone is professional yet engaging. To maximize engagement, consider adding more hashtags for discoverability and include a direct question to encourage comments. The current length is optimal for most platforms.'
+      };
+
+      setResult(mockResult);
+    } catch (err) {
       setError('Failed to analyze post. Please try again.');
     } finally {
       setLoading(false);
@@ -42,308 +128,352 @@ export default function AnalyzePage() {
     return colors[sentiment] || 'bg-gray-500';
   };
 
+  const getScoreColor = (score) => {
+    if (score >= 8) return 'from-emerald-500 to-green-600';
+    if (score >= 6) return 'from-blue-500 to-sky-600';
+    if (score >= 4) return 'from-amber-500 to-orange-600';
+    return 'from-rose-500 to-red-600';
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-white py-12 px-4 relative overflow-hidden">
-      {/* Animated background elements */}
+    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 py-12 px-4 relative overflow-hidden">
+      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-20 left-10 w-72 h-72 bg-sky-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-sky-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
+        <div className="absolute top-40 right-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
+        <div className="absolute bottom-20 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
       </div>
 
-      <div className="max-w-4xl mx-auto relative z-10">
+      <div className="max-w-5xl mx-auto relative z-10">
         {/* Header */}
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <motion.div
-            className="inline-flex items-center justify-center gap-3 mb-4"
-            animate={{
-              scale: [1, 1.02, 1],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            <motion.div
-              animate={{
-                rotate: [0, 360],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-            >
-              <Sparkles className="w-10 h-10 text-sky-500" />
-            </motion.div>
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center gap-3 mb-4">
+            <Sparkles className="w-12 h-12 text-sky-500 animate-pulse" />
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-sky-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
               AI Post Analyzer
             </h1>
-          </motion.div>
+          </div>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Paste your post and get instant tone, sentiment, and engagement insights.
+            Upload your post and get instant AI-powered insights, recommendations, and engagement predictions
           </p>
-        </motion.div>
+        </div>
 
         {/* Main Card */}
-        <motion.div
-          className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-sky-200/50 p-8 md:p-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
+        <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8 md:p-10 mb-8">
           {/* Error Message */}
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <span className="text-red-700 font-medium">{error}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <span className="text-red-700 font-medium">{error}</span>
+            </div>
+          )}
 
-          {/* Textarea */}
-          <div className="mb-6">
-            <label className="block text-slate-700 font-semibold mb-3 text-lg">
-              Your Post
+          {/* Input Method Selector */}
+          <div className="mb-8">
+            <label className="block text-slate-700 font-semibold mb-4 text-lg">
+              Choose Input Method
             </label>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Write or paste your social media post here..."
-              className="w-full h-48 px-5 py-4 bg-white rounded-2xl border-2 border-sky-200 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-200/50 text-slate-800 placeholder-slate-400 resize-none transition-all duration-300 shadow-sm"
-              disabled={loading}
-            />
-            <div className="flex justify-between items-center mt-2 px-2">
-              <span className="text-sm text-slate-500">
-                {text.length} characters
-              </span>
-              <span className="text-sm text-slate-500">
-                {text.trim().split(/\s+/).filter(w => w).length} words
-              </span>
+            <div className="flex gap-3 p-1.5 bg-slate-100 rounded-2xl">
+              <button
+                onClick={() => setInputMethod('caption')}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                  inputMethod === 'caption'
+                    ? 'bg-white shadow-lg text-sky-600 scale-105'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <Type className="w-5 h-5" />
+                Caption Only
+              </button>
+              <button
+                onClick={() => setInputMethod('image')}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                  inputMethod === 'image'
+                    ? 'bg-white shadow-lg text-sky-600 scale-105'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <Image className="w-5 h-5" />
+                Image + Caption
+              </button>
+              <button
+                onClick={() => setInputMethod('url')}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                  inputMethod === 'url'
+                    ? 'bg-white shadow-lg text-sky-600 scale-105'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                <Link2 className="w-5 h-5" />
+                Post URL
+              </button>
             </div>
           </div>
 
+          {/* Input Content */}
+          <div className="mb-6">
+            {inputMethod === 'caption' && (
+              <div>
+                <label className="block text-slate-700 font-semibold mb-3 text-lg">
+                  Post Caption
+                </label>
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Write or paste your social media post caption here..."
+                  className="w-full h-48 px-5 py-4 bg-white rounded-2xl border-2 border-sky-200 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-200 text-slate-800 placeholder-slate-400 resize-none transition-all duration-300 shadow-sm"
+                  disabled={loading}
+                />
+                <div className="flex justify-between items-center mt-2 px-2">
+                  <span className="text-sm text-slate-500">
+                    {caption.length} characters
+                  </span>
+                  <span className="text-sm text-slate-500">
+                    {caption.trim().split(/\s+/).filter(w => w).length} words
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {inputMethod === 'image' && (
+              <div>
+                <label className="block text-slate-700 font-semibold mb-3 text-lg">
+                  Upload Image
+                </label>
+                <div className="border-2 border-dashed border-sky-300 rounded-2xl p-8 text-center hover:border-sky-500 transition-colors bg-sky-50 mb-6">
+                  {imagePreview ? (
+                    <div className="relative inline-block">
+                      <img src={imagePreview} alt="Preview" className="max-h-64 rounded-xl shadow-lg" />
+                      <button
+                        onClick={removeImage}
+                        className="absolute -top-3 -right-3 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg transition-all"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer block">
+                      <Upload className="w-16 h-16 mx-auto mb-4 text-sky-400" />
+                      <p className="text-lg font-semibold text-slate-700 mb-2">Click to upload image</p>
+                      <p className="text-sm text-slate-500">PNG, JPG, WEBP up to 10MB</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                <label className="block text-slate-700 font-semibold mb-3 text-lg">
+                  Caption (Optional)
+                </label>
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Add a caption for better analysis..."
+                  className="w-full h-32 px-5 py-4 bg-white rounded-2xl border-2 border-sky-200 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-200 text-slate-800 placeholder-slate-400 resize-none transition-all duration-300 shadow-sm"
+                  disabled={loading}
+                />
+              </div>
+            )}
+
+            {inputMethod === 'url' && (
+              <div>
+                <label className="block text-slate-700 font-semibold mb-3 text-lg">
+                  Post URL
+                </label>
+                <input
+                  type="url"
+                  value={postUrl}
+                  onChange={(e) => setPostUrl(e.target.value)}
+                  placeholder="https://instagram.com/p/example... or https://twitter.com/user/status/..."
+                  className="w-full px-5 py-4 bg-white rounded-2xl border-2 border-sky-200 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-200 text-slate-800 placeholder-slate-400 transition-all duration-300 shadow-sm"
+                  disabled={loading}
+                />
+                <p className="mt-3 text-sm text-slate-500 px-2">
+                  Paste the direct URL from Instagram, Twitter, Facebook, LinkedIn, or TikTok
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Analyze Button */}
-          <motion.button
+          <button
             onClick={handleAnalyze}
-            disabled={loading || !text.trim()}
-            className="w-full py-4 px-6 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold rounded-2xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 text-lg disabled:cursor-not-allowed"
-            whileHover={!loading && text.trim() ? { scale: 1.02 } : {}}
-            whileTap={!loading && text.trim() ? { scale: 0.98 } : {}}
+            disabled={loading}
+            className="w-full py-5 px-6 bg-gradient-to-r from-sky-500 via-blue-600 to-purple-600 hover:from-sky-600 hover:via-blue-700 hover:to-purple-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold rounded-2xl shadow-xl transition-all duration-300 flex items-center justify-center gap-3 text-lg disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
           >
             {loading ? (
               <>
                 <Loader2 className="w-6 h-6 animate-spin" />
-                Analyzing...
+                Analyzing with AI...
               </>
             ) : (
               <>
-                <Send className="w-6 h-6" />
+                <Sparkles className="w-6 h-6" />
                 Analyze Post
               </>
             )}
-          </motion.button>
-        </motion.div>
+          </button>
+        </div>
 
-        {/* Results Card */}
-        <AnimatePresence>
-          {result && (
-            <motion.div
-              className="mt-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-sky-200/50 p-8 md:p-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6 }}
-            >
-              <motion.h2
-                className="text-3xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent mb-8 flex items-center gap-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <TrendingUp className="w-8 h-8 text-sky-500" />
-                Analysis Results
-              </motion.h2>
+        {/* Results */}
+        {result && (
+          <div className="space-y-6">
+            {/* Overall Score */}
+            <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8 text-center">
+              <div className={`text-7xl font-bold bg-gradient-to-r ${getScoreColor(result.overallScore)} bg-clip-text text-transparent mb-3`}>
+                {result.overallScore}/10
+              </div>
+              <div className="text-2xl font-semibold text-slate-700 mb-2">Overall Score</div>
+              <div className="inline-flex items-center gap-2 px-5 py-2 bg-sky-50 rounded-full border border-sky-200">
+                <div className={`w-3 h-3 rounded-full ${getSentimentColor(result.sentiment)}`} />
+                <span className="text-sm font-semibold">{result.sentiment} Sentiment</span>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Sentiment */}
-                {result.sentiment && (
-                  <motion.div
-                    className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-slate-700 font-semibold text-lg">Sentiment</span>
-                      <Smile className="w-6 h-6 text-sky-500" />
-                    </div>
-                    <div className={`inline-flex items-center px-4 py-2 rounded-full ${getSentimentColor(result.sentiment)} text-white font-bold text-lg shadow-md`}>
-                      {result.sentiment}
-                    </div>
-                    {result.sentimentScore !== undefined && (
-                      <div className="mt-3 text-slate-600 text-sm">
-                        Score: {(result.sentimentScore * 100).toFixed(0)}%
-                      </div>
-                    )}
-                  </motion.div>
-                )}
+            {/* Predictions */}
+            <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8">
+              <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                <TrendingUp className="w-7 h-7 text-sky-500" />
+                Performance Predictions
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-xl p-5 text-center border border-sky-200">
+                  <Users className="w-8 h-8 text-sky-600 mx-auto mb-2" />
+                  <div className="text-xs text-slate-600 mb-1">Est. Reach</div>
+                  <div className="text-xl font-bold text-slate-800">{result.predictions.estimatedReach}</div>
+                </div>
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 text-center border border-purple-200">
+                  <Zap className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                  <div className="text-xs text-slate-600 mb-1">Est. Engagement</div>
+                  <div className="text-xl font-bold text-slate-800">{result.predictions.estimatedEngagement}</div>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-5 text-center border border-emerald-200">
+                  <Clock className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                  <div className="text-xs text-slate-600 mb-1">Best Time</div>
+                  <div className="text-sm font-bold text-slate-800">{result.predictions.bestPostTime}</div>
+                </div>
+                <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-5 text-center border border-orange-200">
+                  <Target className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                  <div className="text-xs text-slate-600 mb-1">Viral Potential</div>
+                  <div className="text-xl font-bold text-slate-800">{result.predictions.viralPotential}</div>
+                </div>
+              </div>
+            </div>
 
-                {/* Readability */}
-                {result.readability !== undefined && (
-                  <motion.div
-                    className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-slate-700 font-semibold text-lg">Readability</span>
-                      <BarChart3 className="w-6 h-6 text-sky-500" />
-                    </div>
-                    <div className="relative h-4 bg-sky-100 rounded-full overflow-hidden">
-                      <motion.div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-sky-400 to-blue-500 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${result.readability}%` }}
-                        transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-                      />
-                    </div>
-                    <div className="mt-3 text-slate-600 text-sm">
-                      {result.readability}/100
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Emoji Count */}
-                {result.emojiCount !== undefined && (
-                  <motion.div
-                    className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Smile className="w-6 h-6 text-sky-500" />
-                          <span className="text-slate-700 font-semibold text-lg">Emojis</span>
-                        </div>
-                        <motion.div
-                          className="text-4xl font-bold text-sky-600"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ delay: 0.6, type: "spring" }}
-                        >
-                          {result.emojiCount}
-                        </motion.div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Hashtag Count */}
-                {result.hashtagCount !== undefined && (
-                  <motion.div
-                    className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Hash className="w-6 h-6 text-sky-500" />
-                          <span className="text-slate-700 font-semibold text-lg">Hashtags</span>
-                        </div>
-                        <motion.div
-                          className="text-4xl font-bold text-sky-600"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ delay: 0.7, type: "spring" }}
-                        >
-                          {result.hashtagCount}
-                        </motion.div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+            {/* Metrics Grid */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Strengths */}
+              <div className="bg-white rounded-3xl shadow-2xl border border-emerald-200 p-8">
+                <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
+                  <CheckCircle className="w-6 h-6 text-emerald-500" />
+                  Strengths
+                </h3>
+                <ul className="space-y-3">
+                  {result.strengths.map((strength, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-slate-700">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
+                      <span>{strength}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              {/* AI Feedback */}
-              {result.feedback && (
-                <motion.div
-                  className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 }}
-                >
-                  <h3 className="text-slate-700 font-bold text-xl mb-4 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-sky-500" />
-                    AI Insights
-                  </h3>
-                  <motion.p
-                    className="text-slate-600 leading-relaxed text-lg"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1, duration: 0.8 }}
-                  >
-                    {result.feedback}
-                  </motion.p>
-                </motion.div>
-              )}
+              {/* Improvements */}
+              <div className="bg-white rounded-3xl shadow-2xl border border-amber-200 p-8">
+                <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
+                  <AlertCircle className="w-6 h-6 text-amber-500" />
+                  Suggested Improvements
+                </h3>
+                <ul className="space-y-3">
+                  {result.improvements.map((improvement, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-slate-700">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
+                      <span>{improvement}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
 
-              {/* Tone Badge */}
-              {result.tone && (
-                <motion.div
-                  className="mt-6 flex items-center gap-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.2 }}
-                >
-                  <span className="text-slate-600 font-semibold">Detected Tone:</span>
-                  <span className="px-4 py-2 bg-gradient-to-r from-sky-100 to-blue-100 rounded-full text-sky-700 font-bold border border-sky-300">
-                    {result.tone}
-                  </span>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {/* Hashtag Recommendations */}
+            {result.hashtags && (
+              <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8">
+                <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
+                  <Hash className="w-6 h-6 text-sky-500" />
+                  Hashtag Recommendations
+                </h3>
+                <div className="space-y-4">
+                  {result.hashtags.used.length > 0 && (
+                    <div>
+                      <div className="text-sm font-semibold text-slate-600 mb-2">Currently Used</div>
+                      <div className="flex flex-wrap gap-2">
+                        {result.hashtags.used.map((tag, idx) => (
+                          <span key={idx} className="px-4 py-2 bg-sky-100 text-sky-700 rounded-full text-sm font-semibold border border-sky-300">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-sm font-semibold text-slate-600 mb-2">Suggested to Add</div>
+                    <div className="flex flex-wrap gap-2">
+                      {result.hashtags.suggested.map((tag, idx) => (
+                        <span key={idx} className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-semibold border border-purple-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* AI Feedback */}
+            <div className="bg-gradient-to-br from-sky-50 to-purple-50 rounded-3xl shadow-2xl border border-sky-200 p-8">
+              <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-sky-500" />
+                AI Insights & Recommendations
+              </h3>
+              <p className="text-slate-700 leading-relaxed text-lg">
+                {result.feedback}
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <span className="text-slate-600 font-semibold">Detected Tone:</span>
+                <span className="px-4 py-2 bg-white rounded-full text-sky-700 font-bold border-2 border-sky-300 shadow-sm">
+                  {result.tone}
+                </span>
+                <span className="text-slate-600 font-semibold ml-4">Target Audience:</span>
+                <span className="px-4 py-2 bg-white rounded-full text-purple-700 font-bold border-2 border-purple-300 shadow-sm">
+                  {result.targetAudience}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      <style jsx>{`
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(20px, -50px) scale(1.1); }
+          50% { transform: translate(-20px, 20px) scale(0.9); }
+          75% { transform: translate(50px, 50px) scale(1.05); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }

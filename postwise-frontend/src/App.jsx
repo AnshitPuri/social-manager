@@ -5,7 +5,6 @@ import ImprovePage from './pages/ImprovePage';
 import PlanPage from './pages/PlanPage';
 import DashboardPage from './pages/DashboardPage';
 import ConnectAccountsPage from './pages/ConnectAccountsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
 import SiteOverviewPage from './pages/SiteOverviewPage';
 
 export default function App() {
@@ -20,7 +19,6 @@ export default function App() {
       {activeTab === 'improve' && <ImprovePage />}
       {activeTab === 'plan' && <PlanPage />}
       {activeTab === 'connect' && <ConnectAccountsPage />}
-      {activeTab === 'analytics' && <AnalyticsPage />}
       {activeTab === 'overview' && <SiteOverviewPage />}
     </div>
   );
