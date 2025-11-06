@@ -1,17 +1,21 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wand2, Copy, Check, Sparkles, Loader2 } from "lucide-react";
+import { Wand2, Copy, Check, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import api from "../services/api";
 
-function Improver({
-  text,
-  tone,
-  onTextChange,
-  onToneChange,
-  onImprove,
-  loading,
-  variations,
-}) {
+function Improver() {
+  const [text, setText] = useState("");
+  const [tone, setTone] = useState("professional");
+  const [loading, setLoading] = useState(false);
+  const [variations, setVariations] = useState([]);
   const [copiedIndex, setCopiedIndex] = useState(null);
+  const [error, setError] = useState("");
+
+  const toneEmojis = {
+    professional: "💼",
+    friendly: "😊",
+    funny: "😄",
+  };
 
   const copyToClipboard = (text, index) => {
     navigator.clipboard.writeText(text);
@@ -19,39 +23,44 @@ function Improver({
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const toneEmojis = {
-    professional: "💼",
-    friendly: "😊",
-    funny: "😄"
+  const handleImprove = async () => {
+    if (!text.trim()) {
+      setError("Please enter some text");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    setVariations([]);
+
+    try {
+      const response = await api.improvePost(text, tone);
+      if (response.success) {
+        const captions = response.data.improved.map((item) => item.caption);
+        setVariations(captions);
+      } else {
+        setError("Something went wrong while improving the post");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to improve post");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-white py-12 px-4 relative overflow-hidden">
-      {/* Animated background elements */}
+      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute top-20 left-10 w-72 h-72 bg-sky-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          animate={{ x: [0, 100, 0], y: [0, 50, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          animate={{ x: [0, -100, 0], y: [0, -50, 0] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
@@ -65,24 +74,12 @@ function Improver({
         >
           <motion.div
             className="inline-flex items-center justify-center gap-3 mb-4"
-            animate={{
-              scale: [1, 1.02, 1],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
             <motion.div
-              animate={{
-                rotate: [0, 360],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear"
-              }}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
             >
               <Wand2 className="w-10 h-10 text-sky-500" />
             </motion.div>
@@ -109,17 +106,15 @@ function Improver({
             </label>
             <textarea
               value={text}
-              onChange={(e) => onTextChange(e.target.value)}
+              onChange={(e) => setText(e.target.value)}
               placeholder="Enter your post caption here…"
               className="w-full h-40 px-5 py-4 bg-white rounded-2xl border-2 border-sky-200 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-200/50 text-slate-800 placeholder-slate-400 resize-none transition-all duration-300 shadow-sm"
               disabled={loading}
             />
             <div className="flex justify-between items-center mt-2 px-2">
+              <span className="text-sm text-slate-500">{text.length} characters</span>
               <span className="text-sm text-slate-500">
-                {(text || '').length} characters
-              </span>
-              <span className="text-sm text-slate-500">
-                {(text || '').trim().split(/\s+/).filter(w => w).length} words
+                {text.trim().split(/\s+/).filter(Boolean).length} words
               </span>
             </div>
           </div>
@@ -131,7 +126,7 @@ function Improver({
             <div className="relative">
               <select
                 value={tone}
-                onChange={(e) => onToneChange(e.target.value)}
+                onChange={(e) => setTone(e.target.value)}
                 className="w-full p-4 pr-10 bg-white border-2 border-sky-200 rounded-2xl focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-200/50 text-slate-800 appearance-none cursor-pointer transition-all duration-300 shadow-sm font-medium"
                 disabled={loading}
               >
@@ -147,12 +142,20 @@ function Improver({
             </div>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+              <AlertCircle className="w-5 h-5" />
+              <span className="font-medium">{error}</span>
+            </div>
+          )}
+
           <motion.button
-            onClick={onImprove}
-            disabled={loading || !(text || '').trim()}
+            onClick={handleImprove}
+            disabled={loading || !text.trim()}
             className="w-full py-4 px-6 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold rounded-2xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 text-lg disabled:cursor-not-allowed"
-            whileHover={!loading && (text || '').trim() ? { scale: 1.02 } : {}}
-            whileTap={!loading && (text || '').trim() ? { scale: 0.98 } : {}}
+            whileHover={!loading && text.trim() ? { scale: 1.02 } : {}}
+            whileTap={!loading && text.trim() ? { scale: 0.98 } : {}}
           >
             {loading ? (
               <>
@@ -168,7 +171,7 @@ function Improver({
           </motion.button>
         </motion.div>
 
-        {/* Loading State */}
+        {/* Loading Animation */}
         <AnimatePresence>
           {loading && (
             <motion.div
@@ -195,9 +198,9 @@ function Improver({
           )}
         </AnimatePresence>
 
-        {/* Results Grid */}
+        {/* Generated Variations */}
         <AnimatePresence>
-          {variations && variations.length > 0 && !loading && (
+          {variations.length > 0 && !loading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -256,12 +259,10 @@ function Improver({
                         )}
                       </motion.button>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-base">
-                      {variation}
-                    </p>
+                    <p className="text-slate-600 leading-relaxed text-base">{variation}</p>
                     <div className="mt-4 pt-4 border-t border-sky-100">
                       <span className="text-xs text-slate-500 font-medium">
-                        {(variation || '').length} characters • {(variation || '').split(/\s+/).length} words
+                        {variation.length} characters • {variation.split(/\s+/).length} words
                       </span>
                     </div>
                   </motion.div>

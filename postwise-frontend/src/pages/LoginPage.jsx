@@ -1,8 +1,7 @@
-// src/pages/LoginPage.jsx
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, provider } from '../firebase';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../firebase/config';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -20,7 +19,8 @@ const LoginPage = () => {
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to sign in');
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -31,10 +31,12 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
+      const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to sign in with Google');
+      console.error('Google login error:', err);
     } finally {
       setLoading(false);
     }
@@ -66,6 +68,7 @@ const LoginPage = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="you@example.com"
               required
+              disabled={loading}
             />
           </div>
 
@@ -80,6 +83,7 @@ const LoginPage = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="••••••••"
               required
+              disabled={loading}
             />
           </div>
 

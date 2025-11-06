@@ -14,6 +14,9 @@ import ConnectAccountsPage from './pages/ConnectAccountsPage';
 import SiteOverviewPage from './pages/SiteOverviewPage';
 import SettingsPage from './pages/Settings';
 
+
+
+
 // Main authenticated app content
 function AuthenticatedApp() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -118,6 +121,15 @@ function PublicRoute({ children }) {
 }
 
 function App() {
+
+  useEffect(() => {
+    // Test backend connection
+    fetch('http://localhost:5000/api/health')
+      .then(res => res.json())
+      .then(data => console.log('✅ Backend connected:', data))
+      .catch(err => console.error('❌ Backend connection failed:', err));
+  }, []); 
+
   return (
     <AuthProvider>
       <Router>

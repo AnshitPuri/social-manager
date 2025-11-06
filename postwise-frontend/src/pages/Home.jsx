@@ -514,7 +514,7 @@ const HomePage = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-sm">
-            <p>© 2025 Postwise. Built with ❤️ using React + Firebase</p>
+            <p>© 2025 Postwise. Built with ❤️ By Anshit Puri </p>
           </div>
         </div>
       </footer>

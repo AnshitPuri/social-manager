@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Wand2, Image, Type, Upload, X, Download, RefreshCw, Sparkles, Copy, Check, Eraser, PaintBucket, Crop, Zap, Plus, Minus, RotateCw, Maximize2 } from 'lucide-react';
+import api from '../services/api';
 
 export default function ImprovePage() {
   const [activeTab, setActiveTab] = useState('text');
@@ -49,27 +50,25 @@ export default function ImprovePage() {
     setVariations(null);
 
     try {
-      // Mock API call - replace with actual endpoint
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call backend API
+      const response = await api.improvePost(text, tone);
       
-      const mockVariations = [
-        {
-          text: "🚀 Transform your social media game with AI-powered insights! Our platform analyzes engagement patterns to help you create content that resonates. Ready to 10x your reach?",
-          reason: "Added emojis, stronger hook, and clear call-to-action"
-        },
-        {
-          text: "Discover the power of AI-driven social media optimization. We help you understand what works, when to post, and how to engage your audience effectively. Start growing today!",
-          reason: "More professional tone with benefits-focused messaging"
-        },
-        {
-          text: "Want better engagement? 📊 Our AI analyzes millions of posts to give you actionable insights. Learn what your audience loves and watch your metrics soar! ⬆️",
-          reason: "Question-based hook with data credibility and visual elements"
-        }
-      ];
+      if (!response.success) {
+        setError(response.error || 'Failed to generate improved versions');
+        return;
+      }
 
-      setVariations(mockVariations);
+      // Transform backend response to match UI expectations
+      const backendData = response.data.data;
+      const transformedVariations = backendData.improved.map(item => ({
+        text: item.caption,
+        reason: item.description
+      }));
+
+      setVariations(transformedVariations);
     } catch (err) {
       setError('Failed to generate improved versions. Please try again.');
+      console.error('Improve error:', err);
     } finally {
       setLoading(false);
     }
@@ -109,7 +108,7 @@ export default function ImprovePage() {
     setImageLoading(true);
 
     try {
-      // Mock AI image editing - replace with actual API
+      // Mock AI image editing - replace with actual API when available
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       // For demo, just return the same image
@@ -150,12 +149,10 @@ export default function ImprovePage() {
   };
 
   return (
-    // Updated background to a simple slate-50 for a cleaner look
     <div className="min-h-screen bg-slate-50 py-12 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
-          {/* Updated header gradient to Cyan and Indigo */}
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent mb-3">
             AI Content Improver
           </h1>
@@ -171,7 +168,6 @@ export default function ImprovePage() {
               onClick={() => setActiveTab('text')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
                 activeTab === 'text'
-                  // Updated Text tab active color to Cyan/Blue
                   ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
@@ -183,7 +179,6 @@ export default function ImprovePage() {
               onClick={() => setActiveTab('image')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
                 activeTab === 'image'
-                  // Updated Image tab active color to Indigo/Purple
                   ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
@@ -218,7 +213,6 @@ export default function ImprovePage() {
                       onClick={() => setTone(t.value)}
                       className={`p-4 rounded-xl border-2 transition-all text-center ${
                         tone === t.value
-                          // Updated tone selector to Indigo
                           ? 'border-indigo-500 bg-indigo-50 shadow-md'
                           : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
@@ -239,7 +233,6 @@ export default function ImprovePage() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Enter your post caption here..."
-                  // Updated textarea focus to Cyan
                   className="w-full h-40 px-5 py-4 border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:outline-none focus:ring-4 focus:ring-cyan-200 resize-none text-slate-800"
                   disabled={loading}
                 />
@@ -253,7 +246,6 @@ export default function ImprovePage() {
               <button
                 onClick={handleImprove}
                 disabled={loading || !text.trim()}
-                // Updated button gradient to Cyan/Indigo
                 className="w-full py-4 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
               >
                 {loading ? (
@@ -274,14 +266,12 @@ export default function ImprovePage() {
             {variations && (
               <div className="space-y-4">
                 <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                  {/* Updated icon color to Indigo */}
                   <Sparkles className="w-6 h-6 text-indigo-500" />
                   Improved Versions
                 </h3>
                 {variations.map((variation, index) => (
                   <div
                     key={index}
-                    // Updated variation card hover border
                     className="bg-white rounded-2xl shadow-lg p-6 border-2 border-slate-200 hover:border-indigo-300 transition-all"
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">
@@ -295,7 +285,6 @@ export default function ImprovePage() {
                       </div>
                       <button
                         onClick={() => handleCopyVariation(variation.text, index)}
-                        // Updated copy button color to Indigo
                         className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
                       >
                         {copiedIndex === index ? (
@@ -325,7 +314,6 @@ export default function ImprovePage() {
               {/* Left Panel - Upload & Edit Controls */}
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                  {/* Updated icon color to Cyan */}
                   <Upload className="w-6 h-6 text-cyan-500" />
                   Upload & Edit
                 </h3>
@@ -377,7 +365,6 @@ export default function ImprovePage() {
                             onClick={() => setEditMode(mode.value)}
                             className={`p-4 rounded-xl border-2 transition-all text-left ${
                               editMode === mode.value
-                                // Updated edit mode selector to Cyan
                                 ? 'border-cyan-500 bg-cyan-50 shadow-md'
                                 : 'border-slate-200 hover:border-slate-300 bg-white'
                             }`}
@@ -405,7 +392,6 @@ export default function ImprovePage() {
                             editMode === 'background' ? 'e.g., Replace background with a beach scene' :
                             'Describe what you want...'
                           }
-                          // Updated textarea focus to Cyan
                           className="w-full h-24 px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:outline-none focus:ring-4 focus:ring-cyan-200 resize-none"
                           disabled={imageLoading}
                         />
@@ -439,7 +425,6 @@ export default function ImprovePage() {
                     <button
                       onClick={handleImageEdit}
                       disabled={imageLoading}
-                      // Updated button gradient to Cyan/Indigo
                       className="w-full py-4 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
                       {imageLoading ? (
@@ -461,7 +446,6 @@ export default function ImprovePage() {
               {/* Right Panel - Result */}
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                  {/* Icon color kept as purple/indigo for contrast */}
                   <Sparkles className="w-6 h-6 text-indigo-500" />
                   Result
                 </h3>
@@ -488,7 +472,6 @@ export default function ImprovePage() {
                           setImagePreview(editedImage);
                           setEditedImage(null);
                         }}
-                        // Updated "Edit Again" button to Indigo
                         className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all"
                       >
                         <RefreshCw className="w-5 h-5" />
@@ -506,7 +489,6 @@ export default function ImprovePage() {
                               key={idx}
                               src={img}
                               alt={`Version ${idx + 1}`}
-                              // Updated history image hover border to Cyan
                               className="w-20 h-20 rounded-lg object-cover cursor-pointer border-2 border-slate-200 hover:border-cyan-500 transition-all"
                               onClick={() => setImagePreview(img)}
                             />
@@ -529,7 +511,6 @@ export default function ImprovePage() {
             </div>
 
             {/* AI Editing Tips */}
-            {/* Updated Tips background and text colors */}
             <div className="mt-6 bg-gradient-to-r from-cyan-50 to-indigo-50 rounded-2xl p-6 border border-cyan-200">
               <h4 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-cyan-600" />

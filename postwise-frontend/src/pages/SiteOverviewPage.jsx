@@ -1,76 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Activity, Users, Zap, Clock, TrendingUp, Server, AlertCircle, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-// Mock API functions (replace with actual API calls)
-const fetchSystemStats = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return {
-    totalUsers: 15847,
-    totalApiRequests: 2847392,
-    uptime: 99.8,
-    activeSessions: 1247
-  };
-};
-
-const fetchUsageMetrics = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1200));
-  return {
-    apiRequests: [
-      { day: 'Mon', requests: 45000 },
-      { day: 'Tue', requests: 52000 },
-      { day: 'Wed', requests: 48000 },
-      { day: 'Thu', requests: 61000 },
-      { day: 'Fri', requests: 58000 },
-      { day: 'Sat', requests: 42000 },
-      { day: 'Sun', requests: 38000 }
-    ],
-    activeUsers: [
-      { day: 'Mon', users: 2100 },
-      { day: 'Tue', users: 2400 },
-      { day: 'Wed', users: 2200 },
-      { day: 'Thu', users: 2800 },
-      { day: 'Fri', users: 2600 },
-      { day: 'Sat', users: 1900 },
-      { day: 'Sun', users: 1700 }
-    ]
-  };
-};
-
-const fetchSystemAlerts = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1400));
-  return [
-    {
-      id: 1,
-      status: 'success',
-      title: 'Database backup completed successfully',
-      timestamp: '5 minutes ago',
-      icon: CheckCircle
-    },
-    {
-      id: 2,
-      status: 'warning',
-      title: 'API response time increased by 15%',
-      timestamp: '23 minutes ago',
-      icon: AlertTriangle
-    },
-    {
-      id: 3,
-      status: 'success',
-      title: 'System security scan completed - No issues found',
-      timestamp: '1 hour ago',
-      icon: CheckCircle
-    },
-    {
-      id: 4,
-      status: 'info',
-      title: 'Scheduled maintenance planned for Saturday 2 AM',
-      timestamp: '2 hours ago',
-      icon: AlertCircle
-    }
-  ];
-};
+import api from '../services/api';
 
 // Animated Counter Component
 const AnimatedCounter = ({ value, duration = 2000, decimals = 0 }) => {
@@ -290,20 +222,71 @@ const SiteOverview = () => {
   const [usageMetrics, setUsageMetrics] = useState(null);
   const [alerts, setAlerts] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [stats, metrics, alertsData] = await Promise.all([
-          fetchSystemStats(),
-          fetchUsageMetrics(),
-          fetchSystemAlerts()
-        ]);
-        setSystemStats(stats);
-        setUsageMetrics(metrics);
-        setAlerts(alertsData);
+        setLoading(true);
+        setError(null);
+
+        // Fetch overview data from backend
+        const overviewResponse = await api.getOverview();
+        
+        if (!overviewResponse.success) {
+          throw new Error(overviewResponse.error || 'Failed to fetch overview data');
+        }
+
+        const overviewData = overviewResponse.data.data;
+
+        // Set system stats
+        setSystemStats({
+          totalUsers: overviewData.stats.totalUsers || 0,
+          totalApiRequests: overviewData.stats.totalApiRequests || 0,
+          uptime: overviewData.stats.uptime || 0,
+          activeSessions: overviewData.stats.activeSessions || 0
+        });
+
+        // Process usage metrics for charts
+        const apiRequestsData = overviewData.usageMetrics?.apiRequests || [];
+        const activeUsersData = overviewData.usageMetrics?.activeUsers || [];
+
+        setUsageMetrics({
+          apiRequests: apiRequestsData,
+          activeUsers: activeUsersData
+        });
+
+        // Fetch activity feed for alerts
+        const activityResponse = await api.getActivity(10);
+        
+        if (activityResponse.success) {
+          // Map activity data to alerts format
+          const activityData = activityResponse.data.data || [];
+          const mappedAlerts = activityData.map((activity, index) => ({
+            id: activity.id || index,
+            status: activity.type || 'info', // 'success', 'warning', 'error', 'info'
+            title: activity.message || activity.action || 'System activity',
+            timestamp: formatTimestamp(activity.timestamp || activity.createdAt),
+            icon: getIconForActivityType(activity.type || 'info')
+          }));
+
+          setAlerts(mappedAlerts);
+        } else {
+          // Use default alerts if activity fetch fails
+          setAlerts([
+            {
+              id: 1,
+              status: 'success',
+              title: 'System is operational',
+              timestamp: 'Just now',
+              icon: CheckCircle
+            }
+          ]);
+        }
+
       } catch (error) {
         console.error('Error loading site overview data:', error);
+        setError(error.message || 'Failed to load overview data');
       } finally {
         setLoading(false);
       }
@@ -311,6 +294,65 @@ const SiteOverview = () => {
 
     loadData();
   }, []);
+
+  // Helper function to format timestamp
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'Unknown time';
+    
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      return date.toLocaleDateString();
+    } catch (e) {
+      return 'Unknown time';
+    }
+  };
+
+  // Helper function to get icon for activity type
+  const getIconForActivityType = (type) => {
+    const iconMap = {
+      success: CheckCircle,
+      warning: AlertTriangle,
+      error: AlertCircle,
+      info: AlertCircle,
+      analyze: Activity,
+      improve: Zap,
+      plan: TrendingUp
+    };
+    return iconMap[type] || AlertCircle;
+  };
+
+  // Error state
+  if (error && !loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-sky-50 to-blue-100 py-12 px-4 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl p-8 shadow-xl max-w-md text-center"
+        >
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Data</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+          >
+            Retry
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-sky-50 to-blue-100 py-12 px-4 relative overflow-hidden">
@@ -456,7 +498,7 @@ const SiteOverview = () => {
               <LoadingSkeleton className="h-96" />
               <LoadingSkeleton className="h-96" />
             </div>
-          ) : usageMetrics ? (
+          ) : usageMetrics && usageMetrics.apiRequests?.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ChartPanel
                 title="API Requests per Day"
@@ -476,8 +518,9 @@ const SiteOverview = () => {
               />
             </div>
           ) : (
-            <div className="text-center text-red-700 p-4 bg-red-50 rounded-2xl border border-red-200 font-medium">
-              Failed to load usage metrics
+            <div className="bg-sky-50 rounded-2xl p-8 text-center border border-sky-200">
+              <TrendingUp className="w-12 h-12 text-sky-400 mx-auto mb-3" />
+              <p className="text-slate-600 font-medium">No usage data available yet</p>
             </div>
           )}
         </motion.div>
@@ -490,7 +533,7 @@ const SiteOverview = () => {
         >
           <h2 className="text-2xl font-bold text-slate-700 mb-4 flex items-center gap-2">
             <AlertCircle className="w-6 h-6 text-sky-500" />
-            System Alerts & Notifications
+            System Alerts & Activity
           </h2>
           {loading ? (
             <div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md">
@@ -502,7 +545,7 @@ const SiteOverview = () => {
                 ))}
               </div>
             </div>
-          ) : alerts ? (
+          ) : alerts && alerts.length > 0 ? (
             <div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md">
               <div className="space-y-3">
                 {alerts.map((alert, index) => (
@@ -511,8 +554,9 @@ const SiteOverview = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center text-red-700 p-4 bg-red-50 rounded-2xl border border-red-200 font-medium">
-              Failed to load system alerts
+            <div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md text-center">
+              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+              <p className="text-slate-600 font-medium">All systems operational</p>
             </div>
           )}
         </motion.div>

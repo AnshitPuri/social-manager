@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Send, TrendingUp, Hash, Smile, BarChart3, AlertCircle, Loader2 } from 'lucide-react';
+import api from '../services/api';
 
 export default function AnalyzePage() {
   const [text, setText] = useState('');
@@ -13,61 +14,65 @@ export default function AnalyzePage() {
       setError('Please enter some text to analyze');
       return;
     }
+
     setError('');
     setLoading(true);
     setResult(null);
 
-    // Simulate API call
-    setTimeout(() => {
-      setResult({
-        sentiment: 'Positive',
-        sentimentScore: 0.85,
-        readability: 78,
-        emojiCount: 3,
-        hashtagCount: 2,
-        tone: 'Professional & Engaging',
-        feedback: 'Your post has a strong positive sentiment and good readability. The use of emojis adds personality while maintaining professionalism. Consider adding more hashtags to increase discoverability.'
-      });
+    try {
+      const response = await api.analyzePost(text);
+
+      if (response.success) {
+        setResult({
+          sentiment: getSentimentLabel(response.data.sentiment),
+          sentimentScore: response.data.sentiment / 100,
+          readability: response.data.readability,
+          emojiCount: response.data.emojiCount,
+          hashtagCount: response.data.hashtagCount,
+          wordCount: response.data.wordCount,
+          charCount: response.data.charCount,
+          hashtags: response.data.hashtags,
+          tone: response.data.tone || 'Professional & Engaging',
+          feedback: response.data.feedback || 'Your post looks good! Try balancing tone and readability for better engagement.'
+        });
+      } else {
+        setError('Unexpected response from server');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to analyze post');
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
+  };
+
+  const getSentimentLabel = (score) => {
+    if (score >= 70) return 'Positive';
+    if (score >= 40) return 'Neutral';
+    return 'Negative';
   };
 
   const getSentimentColor = (sentiment) => {
     const colors = {
-      'Positive': 'bg-emerald-500',
-      'Neutral': 'bg-amber-500',
-      'Negative': 'bg-rose-500'
+      Positive: 'bg-emerald-500',
+      Neutral: 'bg-amber-500',
+      Negative: 'bg-rose-500',
     };
     return colors[sentiment] || 'bg-gray-500';
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-white py-12 px-4 relative overflow-hidden">
-      {/* Animated background elements */}
+      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute top-20 left-10 w-72 h-72 bg-sky-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          animate={{ x: [0, 100, 0], y: [0, 50, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
           className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          animate={{ x: [0, -100, 0], y: [0, -50, 0] }}
+          transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
@@ -81,24 +86,12 @@ export default function AnalyzePage() {
         >
           <motion.div
             className="inline-flex items-center justify-center gap-3 mb-4"
-            animate={{
-              scale: [1, 1.02, 1],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
             <motion.div
-              animate={{
-                rotate: [0, 360],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear"
-              }}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
             >
               <Sparkles className="w-10 h-10 text-sky-500" />
             </motion.div>
@@ -118,7 +111,7 @@ export default function AnalyzePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          {/* Error Message */}
+          {/* Error */}
           <AnimatePresence>
             {error && (
               <motion.div
@@ -127,7 +120,7 @@ export default function AnalyzePage() {
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-red-500" />
                 <span className="text-red-700 font-medium">{error}</span>
               </motion.div>
             )}
@@ -135,9 +128,7 @@ export default function AnalyzePage() {
 
           {/* Textarea */}
           <div className="mb-6">
-            <label className="block text-slate-700 font-semibold mb-3 text-lg">
-              Your Post
-            </label>
+            <label className="block text-slate-700 font-semibold mb-3 text-lg">Your Post</label>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -146,16 +137,14 @@ export default function AnalyzePage() {
               disabled={loading}
             />
             <div className="flex justify-between items-center mt-2 px-2">
+              <span className="text-sm text-slate-500">{text.length} characters</span>
               <span className="text-sm text-slate-500">
-                {text.length} characters
-              </span>
-              <span className="text-sm text-slate-500">
-                {text.trim().split(/\s+/).filter(w => w).length} words
+                {text.trim().split(/\s+/).filter(Boolean).length} words
               </span>
             </div>
           </div>
 
-          {/* Analyze Button */}
+          {/* Button */}
           <motion.button
             onClick={handleAnalyze}
             disabled={loading || !text.trim()}
@@ -177,7 +166,7 @@ export default function AnalyzePage() {
           </motion.button>
         </motion.div>
 
-        {/* Results Card */}
+        {/* Results */}
         <AnimatePresence>
           {result && (
             <motion.div
@@ -189,9 +178,6 @@ export default function AnalyzePage() {
             >
               <motion.h2
                 className="text-3xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent mb-8 flex items-center gap-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
               >
                 <TrendingUp className="w-8 h-8 text-sky-500" />
                 Analysis Results
@@ -199,17 +185,16 @@ export default function AnalyzePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {/* Sentiment */}
-                <motion.div
-                  className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
+                <motion.div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-slate-700 font-semibold text-lg">Sentiment</span>
                     <Smile className="w-6 h-6 text-sky-500" />
                   </div>
-                  <div className={`inline-flex items-center px-4 py-2 rounded-full ${getSentimentColor(result.sentiment)} text-white font-bold text-lg shadow-md`}>
+                  <div
+                    className={`inline-flex items-center px-4 py-2 rounded-full ${getSentimentColor(
+                      result.sentiment
+                    )} text-white font-bold text-lg shadow-md`}
+                  >
                     {result.sentiment}
                   </div>
                   <div className="mt-3 text-slate-600 text-sm">
@@ -218,12 +203,7 @@ export default function AnalyzePage() {
                 </motion.div>
 
                 {/* Readability */}
-                <motion.div
-                  className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
+                <motion.div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-slate-700 font-semibold text-lg">Readability</span>
                     <BarChart3 className="w-6 h-6 text-sky-500" />
@@ -233,21 +213,14 @@ export default function AnalyzePage() {
                       className="absolute inset-y-0 left-0 bg-gradient-to-r from-sky-400 to-blue-500 rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${result.readability}%` }}
-                      transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
+                      transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
                     />
                   </div>
-                  <div className="mt-3 text-slate-600 text-sm">
-                    {result.readability}/100 - Excellent
-                  </div>
+                  <div className="mt-3 text-slate-600 text-sm">{result.readability}/100</div>
                 </motion.div>
 
                 {/* Emoji Count */}
-                <motion.div
-                  className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                >
+                <motion.div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
@@ -258,7 +231,7 @@ export default function AnalyzePage() {
                         className="text-4xl font-bold text-sky-600"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ delay: 0.6, type: "spring" }}
+                        transition={{ type: 'spring' }}
                       >
                         {result.emojiCount}
                       </motion.div>
@@ -267,12 +240,7 @@ export default function AnalyzePage() {
                 </motion.div>
 
                 {/* Hashtag Count */}
-                <motion.div
-                  className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 }}
-                >
+                <motion.div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
@@ -283,7 +251,7 @@ export default function AnalyzePage() {
                         className="text-4xl font-bold text-sky-600"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ delay: 0.7, type: "spring" }}
+                        transition={{ type: 'spring' }}
                       >
                         {result.hashtagCount}
                       </motion.div>
@@ -293,34 +261,19 @@ export default function AnalyzePage() {
               </div>
 
               {/* AI Feedback */}
-              <motion.div
-                className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-              >
+              <motion.div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-6 border border-sky-200 shadow-md">
                 <h3 className="text-slate-700 font-bold text-xl mb-4 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-sky-500" />
                   AI Insights
                 </h3>
-                <motion.p
-                  className="text-slate-600 leading-relaxed text-lg"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1, duration: 0.8 }}
-                >
+                <motion.p className="text-slate-600 leading-relaxed text-lg">
                   {result.feedback}
                 </motion.p>
               </motion.div>
 
-              {/* Tone Badge */}
+              {/* Tone */}
               {result.tone && (
-                <motion.div
-                  className="mt-6 flex items-center gap-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.2 }}
-                >
+                <motion.div className="mt-6 flex items-center gap-3">
                   <span className="text-slate-600 font-semibold">Detected Tone:</span>
                   <span className="px-4 py-2 bg-gradient-to-r from-sky-100 to-blue-100 rounded-full text-sky-700 font-bold border border-sky-300">
                     {result.tone}

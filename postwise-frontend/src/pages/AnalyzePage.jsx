@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Send, TrendingUp, Hash, Smile, BarChart3, AlertCircle, Loader2, Image, Link2, Type, Upload, X, CheckCircle, Zap, Target, Clock, Users } from 'lucide-react';
+import { auth } from '../firebase/config.js';
 
 export default function AnalyzePage() {
   const [inputMethod, setInputMethod] = useState('caption');
@@ -54,69 +55,143 @@ export default function AnalyzePage() {
     setResult(null);
 
     try {
-      // Simulate AI analysis with comprehensive results
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      // Get Firebase auth token
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('You must be logged in to analyze posts');
+      }
+      
+      const token = await user.getIdToken();
+
+      // Call backend API
+      const response = await fetch('http://localhost:5000/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: caption,
+          inputMethod,
+          postUrl: inputMethod === 'url' ? postUrl : undefined,
+          hasImage: !!selectedImage
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze post');
+      }
+
+      const data = await response.json();
+      
+      // Transform backend response to match UI expectations
+      const analysisResult = data.data;
       
       const mockResult = {
-        overallScore: 8.2,
-        sentiment: 'Positive',
-        sentimentScore: 0.85,
-        readability: 78,
-        emojiCount: caption.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu)?.length || 0,
-        hashtagCount: caption.match(/#\w+/g)?.length || 0,
+        overallScore: calculateOverallScore(analysisResult),
+        sentiment: getSentimentLabel(analysisResult.sentiment),
+        sentimentScore: analysisResult.sentiment / 100,
+        readability: analysisResult.readability,
+        emojiCount: analysisResult.emojiCount,
+        hashtagCount: analysisResult.hashtagCount,
         tone: 'Professional & Engaging',
-        wordCount: caption.trim().split(/\s+/).filter(w => w).length,
-        characterCount: caption.length,
+        wordCount: analysisResult.wordCount,
+        characterCount: analysisResult.charCount,
         
         predictions: {
-          estimatedReach: '15K - 25K',
-          estimatedEngagement: '6.8%',
+          estimatedReach: estimateReach(analysisResult),
+          estimatedEngagement: estimateEngagement(analysisResult),
           bestPostTime: '2:00 PM - 4:00 PM',
-          viralPotential: 'High'
+          viralPotential: getViralPotential(analysisResult)
         },
         
-        strengths: [
-          'Clear and concise messaging',
-          'Good use of emojis for engagement',
-          'Effective call-to-action present',
-          'Optimal text length for the platform',
-          'Strong opening hook'
-        ],
-        
-        improvements: [
-          'Consider adding 2-3 more relevant hashtags',
-          'Include a question to boost comments',
-          'Add urgency with time-sensitive language',
-          'Mention specific benefits or outcomes',
-          'Try shorter sentences for better readability'
-        ],
+        strengths: parseStrengths(analysisResult.feedback),
+        improvements: parseImprovements(analysisResult.feedback),
         
         hashtags: {
-          used: caption.match(/#\w+/g) || [],
+          used: analysisResult.hashtags || [],
           suggested: ['#ContentMarketing', '#DigitalStrategy', '#SocialMediaTips', '#GrowthHacking']
         },
         
-        seoScore: 72,
+        seoScore: analysisResult.readability,
         engagementFactors: {
-          callToAction: true,
-          emotionalAppeal: true,
+          callToAction: caption.toLowerCase().includes('click') || caption.toLowerCase().includes('link'),
+          emotionalAppeal: analysisResult.sentiment > 60,
           visualElements: !!selectedImage,
-          trending: false,
+          trending: analysisResult.hashtagCount > 3,
           personalStory: false
         },
         
         targetAudience: 'Marketing professionals and content creators',
         contentType: inputMethod === 'image' ? 'Visual Content' : 'Text Post',
-        
-        feedback: 'Your post shows strong potential with clear messaging and good structure. The tone is professional yet engaging. To maximize engagement, consider adding more hashtags for discoverability and include a direct question to encourage comments. The current length is optimal for most platforms.'
+        feedback: analysisResult.feedback
       };
 
       setResult(mockResult);
     } catch (err) {
-      setError('Failed to analyze post. Please try again.');
+      console.error('Analysis error:', err);
+      setError(err.message || 'Failed to analyze post. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper functions
+  const calculateOverallScore = (analysis) => {
+    const sentimentScore = analysis.sentiment / 10;
+    const readabilityScore = analysis.readability / 10;
+    const engagementScore = (analysis.hashtagCount > 0 && analysis.hashtagCount <= 10) ? 8 : 5;
+    return parseFloat(((sentimentScore + readabilityScore + engagementScore) / 3).toFixed(1));
+  };
+
+  const getSentimentLabel = (score) => {
+    if (score >= 70) return 'Positive';
+    if (score >= 40) return 'Neutral';
+    return 'Negative';
+  };
+
+  const estimateReach = (analysis) => {
+    const baseReach = 5000;
+    const multiplier = (analysis.sentiment / 50) * (analysis.readability / 50);
+    const reach = Math.floor(baseReach * multiplier);
+    return `${Math.floor(reach / 1000)}K - ${Math.floor(reach * 1.5 / 1000)}K`;
+  };
+
+  const estimateEngagement = (analysis) => {
+    const engagement = ((analysis.sentiment / 100) * 5 + (analysis.readability / 100) * 3).toFixed(1);
+    return `${engagement}%`;
+  };
+
+  const getViralPotential = (analysis) => {
+    const score = (analysis.sentiment + analysis.readability) / 2;
+    if (score >= 75) return 'High';
+    if (score >= 50) return 'Medium';
+    return 'Low';
+  };
+
+  const parseStrengths = (feedback) => {
+    const strengths = [];
+    if (feedback.includes('positive')) strengths.push('Strong positive sentiment detected');
+    if (feedback.includes('readability')) strengths.push('Excellent readability score');
+    if (feedback.includes('hashtag')) strengths.push('Good hashtag usage');
+    if (strengths.length === 0) {
+      strengths.push('Clear and concise messaging');
+      strengths.push('Optimal text length for the platform');
+    }
+    return strengths.slice(0, 5);
+  };
+
+  const parseImprovements = (feedback) => {
+    const improvements = [];
+    if (feedback.includes('negative')) improvements.push('Consider more positive language');
+    if (feedback.includes('hard to read')) improvements.push('Try shorter sentences for better readability');
+    if (feedback.includes('hashtag')) improvements.push('Add 3-5 relevant hashtags');
+    if (improvements.length === 0) {
+      improvements.push('Include a question to boost comments');
+      improvements.push('Add urgency with time-sensitive language');
+    }
+    return improvements.slice(0, 5);
   };
 
   const getSentimentColor = (sentiment) => {
