@@ -9,17 +9,8 @@ const router = express.Router();
  * Generates improved versions of caption in different tones
  * Body: { content: string, tone: 'professional' | 'friendly' | 'funny' }
  */
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   try {
-    // ===========================
-    // TEMP MOCK USER (for testing)
-    // Remove this line when using real Firebase auth
-    req.user = { uid: 'test123', email: 'test@example.com' };
-    // ===========================
-
-    // If you want real token verification, uncomment this line:
-    // await verifyToken(req, res, () => {});
-
     const { content, tone = 'professional' } = req.body;
     const { uid, email } = req.user;
 
@@ -30,7 +21,7 @@ router.post('/', async (req, res) => {
     console.log(`✨ Generating improved captions (${tone}) for user: ${email}`);
 
     // ============================================
-    // GENERATE IMPROVED VERSIONS
+    // GENERATE IMPROVED VERSIONS (Placeholder)
     // ============================================
     const improvedVersions = generateImprovedCaptions(content, tone);
 
@@ -53,6 +44,7 @@ router.post('/', async (req, res) => {
         improved: improvedVersions
       }
     });
+
   } catch (error) {
     console.error('Error improving content:', error);
     res.status(500).json({ error: 'Failed to improve content' });
@@ -60,32 +52,72 @@ router.post('/', async (req, res) => {
 });
 
 // ============================================
-// HELPER FUNCTIONS
+// HELPER FUNCTION
 // ============================================
 function generateImprovedCaptions(content, tone) {
   const versions = [];
 
-  switch(tone) {
+  switch (tone) {
     case 'professional':
-      versions.push({ id: 1, caption: `${content}\n\n#Professional #Business #Growth`, description: 'Professional tone with business hashtags' });
-      versions.push({ id: 2, caption: `Elevating your perspective: ${content}`, description: 'Enhanced professional version' });
-      versions.push({ id: 3, caption: `${content}\n\nWhat are your thoughts on this?`, description: 'Engaging professional tone' });
+      versions.push({
+        id: 1,
+        caption: `${content}\n\n#Professional #Business #Growth`,
+        description: 'Professional tone with business hashtags'
+      });
+      versions.push({
+        id: 2,
+        caption: `Elevating your perspective: ${content}`,
+        description: 'Enhanced professional version'
+      });
+      versions.push({
+        id: 3,
+        caption: `${content}\n\nWhat are your thoughts on this?`,
+        description: 'Engaging professional tone'
+      });
       break;
 
     case 'friendly':
-      versions.push({ id: 1, caption: `Hey friends! 👋 ${content}`, description: 'Warm and friendly opening' });
-      versions.push({ id: 2, caption: `${content} 😊\n\nLet me know what you think!`, description: 'Casual and inviting' });
-      versions.push({ id: 3, caption: `Just wanted to share: ${content} ❤️`, description: 'Personal and authentic' });
+      versions.push({
+        id: 1,
+        caption: `Hey friends! 👋 ${content}`,
+        description: 'Warm and friendly opening'
+      });
+      versions.push({
+        id: 2,
+        caption: `${content} 😊\n\nLet me know what you think!`,
+        description: 'Casual and inviting'
+      });
+      versions.push({
+        id: 3,
+        caption: `Just wanted to share: ${content} ❤️`,
+        description: 'Personal and authentic'
+      });
       break;
 
     case 'funny':
-      versions.push({ id: 1, caption: `${content} 😂\n\n(No seriously though!)`, description: 'Humorous take' });
-      versions.push({ id: 2, caption: `Plot twist: ${content} 🤯`, description: 'Playful and engaging' });
-      versions.push({ id: 3, caption: `${content}\n\nI'll see myself out 🚪😅`, description: 'Light-hearted humor' });
+      versions.push({
+        id: 1,
+        caption: `${content} 😂\n\n(No seriously though!)`,
+        description: 'Humorous take'
+      });
+      versions.push({
+        id: 2,
+        caption: `Plot twist: ${content} 🤯`,
+        description: 'Playful and engaging'
+      });
+      versions.push({
+        id: 3,
+        caption: `${content}\n\nI'll see myself out 🚪😅`,
+        description: 'Light-hearted humor'
+      });
       break;
 
     default:
-      versions.push({ id: 1, caption: content, description: 'Original content' });
+      versions.push({
+        id: 1,
+        caption: content,
+        description: 'Original content'
+      });
   }
 
   return versions;

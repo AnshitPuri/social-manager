@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Sparkles, Send, TrendingUp, Hash, Smile, BarChart3, AlertCircle, Loader2, Image, Link2, Type, Upload, X, CheckCircle, Zap, Target, Clock, Users } from 'lucide-react';
-import { auth } from '../firebase/config.js';
 
 export default function AnalyzePage() {
   const [inputMethod, setInputMethod] = useState('caption');
@@ -37,7 +36,6 @@ export default function AnalyzePage() {
   const handleAnalyze = async () => {
     setError('');
     
-    // Validation based on input method
     if (inputMethod === 'caption' && !caption.trim()) {
       setError('Please enter a caption to analyze');
       return;
@@ -55,38 +53,18 @@ export default function AnalyzePage() {
     setResult(null);
 
     try {
-      // Get Firebase auth token
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('You must be logged in to analyze posts');
-      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const token = await user.getIdToken();
-
-      // Call backend API
-      const response = await fetch('http://localhost:5000/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          content: caption,
-          inputMethod,
-          postUrl: inputMethod === 'url' ? postUrl : undefined,
-          hasImage: !!selectedImage
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze post');
-      }
-
-      const data = await response.json();
-      
-      // Transform backend response to match UI expectations
-      const analysisResult = data.data;
+      const analysisResult = {
+        sentiment: Math.floor(Math.random() * 40) + 50,
+        readability: Math.floor(Math.random() * 30) + 60,
+        emojiCount: (caption.match(/[\u{1F300}-\u{1F9FF}]/gu) || []).length,
+        hashtagCount: (caption.match(/#\w+/g) || []).length,
+        hashtags: (caption.match(/#\w+/g) || []),
+        wordCount: caption.trim().split(/\s+/).filter(w => w).length,
+        charCount: caption.length,
+        feedback: "Your post demonstrates strong engagement potential with clear messaging and good readability. Consider adding more hashtags to increase discoverability."
+      };
       
       const mockResult = {
         overallScore: calculateOverallScore(analysisResult),
@@ -106,8 +84,8 @@ export default function AnalyzePage() {
           viralPotential: getViralPotential(analysisResult)
         },
         
-        strengths: parseStrengths(analysisResult.feedback),
-        improvements: parseImprovements(analysisResult.feedback),
+        strengths: parseStrengths(analysisResult.feedback, analysisResult),
+        improvements: parseImprovements(analysisResult.feedback, analysisResult),
         
         hashtags: {
           used: analysisResult.hashtags || [],
@@ -137,12 +115,32 @@ export default function AnalyzePage() {
     }
   };
 
-  // Helper functions
   const calculateOverallScore = (analysis) => {
     const sentimentScore = analysis.sentiment / 10;
     const readabilityScore = analysis.readability / 10;
-    const engagementScore = (analysis.hashtagCount > 0 && analysis.hashtagCount <= 10) ? 8 : 5;
-    return parseFloat(((sentimentScore + readabilityScore + engagementScore) / 3).toFixed(1));
+    
+    let hashtagScore = 0;
+    if (analysis.hashtagCount === 0) hashtagScore = 3;
+    else if (analysis.hashtagCount >= 1 && analysis.hashtagCount <= 3) hashtagScore = 7;
+    else if (analysis.hashtagCount >= 4 && analysis.hashtagCount <= 7) hashtagScore = 10;
+    else if (analysis.hashtagCount >= 8 && analysis.hashtagCount <= 10) hashtagScore = 8;
+    else hashtagScore = 5;
+    
+    let wordCountScore = 0;
+    if (analysis.wordCount < 10) wordCountScore = 4;
+    else if (analysis.wordCount >= 10 && analysis.wordCount <= 50) wordCountScore = 9;
+    else if (analysis.wordCount >= 51 && analysis.wordCount <= 100) wordCountScore = 10;
+    else if (analysis.wordCount >= 101 && analysis.wordCount <= 200) wordCountScore = 8;
+    else wordCountScore = 6;
+    
+    const overallScore = (
+      sentimentScore * 0.40 +
+      readabilityScore * 0.30 +
+      hashtagScore * 0.15 +
+      wordCountScore * 0.15
+    );
+    
+    return parseFloat(overallScore.toFixed(1));
   };
 
   const getSentimentLabel = (score) => {
@@ -152,15 +150,32 @@ export default function AnalyzePage() {
   };
 
   const estimateReach = (analysis) => {
-    const baseReach = 5000;
-    const multiplier = (analysis.sentiment / 50) * (analysis.readability / 50);
-    const reach = Math.floor(baseReach * multiplier);
-    return `${Math.floor(reach / 1000)}K - ${Math.floor(reach * 1.5 / 1000)}K`;
+    const baseReach = 3000;
+    const sentimentMultiplier = Math.max(0.5, analysis.sentiment / 50);
+    const readabilityMultiplier = Math.max(0.5, analysis.readability / 50);
+    const hashtagMultiplier = analysis.hashtagCount > 0 ? 1.3 : 0.8;
+    const emojiMultiplier = analysis.emojiCount > 0 && analysis.emojiCount <= 5 ? 1.2 : 1.0;
+    
+    const totalMultiplier = sentimentMultiplier * readabilityMultiplier * hashtagMultiplier * emojiMultiplier;
+    const minReach = Math.floor(baseReach * totalMultiplier);
+    const maxReach = Math.floor(minReach * 2.5);
+    
+    if (maxReach >= 1000000) {
+      return `${(minReach / 1000000).toFixed(1)}M - ${(maxReach / 1000000).toFixed(1)}M`;
+    } else if (maxReach >= 1000) {
+      return `${Math.floor(minReach / 1000)}K - ${Math.floor(maxReach / 1000)}K`;
+    }
+    return `${minReach} - ${maxReach}`;
   };
 
   const estimateEngagement = (analysis) => {
-    const engagement = ((analysis.sentiment / 100) * 5 + (analysis.readability / 100) * 3).toFixed(1);
-    return `${engagement}%`;
+    const sentimentFactor = analysis.sentiment / 100 * 4;
+    const readabilityFactor = analysis.readability / 100 * 3;
+    const hashtagFactor = analysis.hashtagCount > 0 && analysis.hashtagCount <= 7 ? 1.5 : 0.5;
+    const emojiFactor = analysis.emojiCount > 0 && analysis.emojiCount <= 5 ? 1 : 0;
+    
+    const engagement = sentimentFactor + readabilityFactor + hashtagFactor + emojiFactor;
+    return `${Math.max(0.5, engagement).toFixed(1)}%`;
   };
 
   const getViralPotential = (analysis) => {
@@ -170,11 +185,14 @@ export default function AnalyzePage() {
     return 'Low';
   };
 
-  const parseStrengths = (feedback) => {
+  const parseStrengths = (feedback, analysis) => {
     const strengths = [];
-    if (feedback.includes('positive')) strengths.push('Strong positive sentiment detected');
-    if (feedback.includes('readability')) strengths.push('Excellent readability score');
-    if (feedback.includes('hashtag')) strengths.push('Good hashtag usage');
+    if (analysis.sentiment >= 70) strengths.push('Strong positive sentiment detected');
+    if (analysis.readability >= 70) strengths.push('Excellent readability score');
+    if (analysis.hashtagCount >= 3 && analysis.hashtagCount <= 7) strengths.push('Optimal hashtag usage');
+    if (analysis.wordCount >= 10 && analysis.wordCount <= 100) strengths.push('Perfect post length for engagement');
+    if (analysis.emojiCount > 0 && analysis.emojiCount <= 5) strengths.push('Good use of emojis for expression');
+    
     if (strengths.length === 0) {
       strengths.push('Clear and concise messaging');
       strengths.push('Optimal text length for the platform');
@@ -182,11 +200,16 @@ export default function AnalyzePage() {
     return strengths.slice(0, 5);
   };
 
-  const parseImprovements = (feedback) => {
+  const parseImprovements = (feedback, analysis) => {
     const improvements = [];
-    if (feedback.includes('negative')) improvements.push('Consider more positive language');
-    if (feedback.includes('hard to read')) improvements.push('Try shorter sentences for better readability');
-    if (feedback.includes('hashtag')) improvements.push('Add 3-5 relevant hashtags');
+    if (analysis.sentiment < 60) improvements.push('Consider more positive and uplifting language');
+    if (analysis.readability < 60) improvements.push('Try shorter sentences for better readability');
+    if (analysis.hashtagCount === 0) improvements.push('Add 3-5 relevant hashtags to increase reach');
+    if (analysis.hashtagCount > 10) improvements.push('Reduce hashtags to 5-7 for better focus');
+    if (analysis.wordCount < 10) improvements.push('Add more context to make your message clearer');
+    if (analysis.wordCount > 200) improvements.push('Shorten your post for better engagement');
+    if (analysis.emojiCount === 0) improvements.push('Consider adding 1-2 emojis for visual appeal');
+    
     if (improvements.length === 0) {
       improvements.push('Include a question to boost comments');
       improvements.push('Add urgency with time-sensitive language');
@@ -212,15 +235,13 @@ export default function AnalyzePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 py-12 px-4 relative overflow-hidden">
-      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-sky-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-        <div className="absolute top-40 right-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-        <div className="absolute bottom-20 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+        <div className="absolute top-40 right-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20" style={{ animation: 'blob 7s infinite 2s' }} />
+        <div className="absolute bottom-20 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20" style={{ animation: 'blob 7s infinite 4s' }} />
       </div>
 
       <div className="max-w-5xl mx-auto relative z-10">
-        {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center gap-3 mb-4">
             <Sparkles className="w-12 h-12 text-sky-500 animate-pulse" />
@@ -233,9 +254,7 @@ export default function AnalyzePage() {
           </p>
         </div>
 
-        {/* Main Card */}
         <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8 md:p-10 mb-8">
-          {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -243,7 +262,6 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {/* Input Method Selector */}
           <div className="mb-8">
             <label className="block text-slate-700 font-semibold mb-4 text-lg">
               Choose Input Method
@@ -285,7 +303,6 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          {/* Input Content */}
           <div className="mb-6">
             {inputMethod === 'caption' && (
               <div>
@@ -374,7 +391,6 @@ export default function AnalyzePage() {
             )}
           </div>
 
-          {/* Analyze Button */}
           <button
             onClick={handleAnalyze}
             disabled={loading}
@@ -394,10 +410,8 @@ export default function AnalyzePage() {
           </button>
         </div>
 
-        {/* Results */}
         {result && (
           <div className="space-y-6">
-            {/* Overall Score */}
             <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8 text-center">
               <div className={`text-7xl font-bold bg-gradient-to-r ${getScoreColor(result.overallScore)} bg-clip-text text-transparent mb-3`}>
                 {result.overallScore}/10
@@ -409,7 +423,6 @@ export default function AnalyzePage() {
               </div>
             </div>
 
-            {/* Predictions */}
             <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8">
               <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
                 <TrendingUp className="w-7 h-7 text-sky-500" />
@@ -439,9 +452,7 @@ export default function AnalyzePage() {
               </div>
             </div>
 
-            {/* Metrics Grid */}
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Strengths */}
               <div className="bg-white rounded-3xl shadow-2xl border border-emerald-200 p-8">
                 <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
                   <CheckCircle className="w-6 h-6 text-emerald-500" />
@@ -457,7 +468,6 @@ export default function AnalyzePage() {
                 </ul>
               </div>
 
-              {/* Improvements */}
               <div className="bg-white rounded-3xl shadow-2xl border border-amber-200 p-8">
                 <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
                   <AlertCircle className="w-6 h-6 text-amber-500" />
@@ -474,7 +484,6 @@ export default function AnalyzePage() {
               </div>
             </div>
 
-            {/* Hashtag Recommendations */}
             {result.hashtags && (
               <div className="bg-white rounded-3xl shadow-2xl border border-sky-200 p-8">
                 <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
@@ -508,7 +517,6 @@ export default function AnalyzePage() {
               </div>
             )}
 
-            {/* AI Feedback */}
             <div className="bg-gradient-to-br from-sky-50 to-purple-50 rounded-3xl shadow-2xl border border-sky-200 p-8">
               <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-3">
                 <Sparkles className="w-6 h-6 text-sky-500" />
@@ -532,7 +540,7 @@ export default function AnalyzePage() {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes blob {
           0%, 100% { transform: translate(0, 0) scale(1); }
           25% { transform: translate(20px, -50px) scale(1.1); }
@@ -541,12 +549,6 @@ export default function AnalyzePage() {
         }
         .animate-blob {
           animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
         }
       `}</style>
     </div>
