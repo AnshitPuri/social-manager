@@ -13,9 +13,7 @@ import DashboardPage from './pages/DashboardPage';
 import ConnectAccountsPage from './pages/ConnectAccountsPage';
 import SiteOverviewPage from './pages/SiteOverviewPage';
 import SettingsPage from './pages/Settings';
-
-
-
+import ContentRecyclingMachine from './pages/ContentRecyclingMachine'; // NEW IMPORT
 
 // Main authenticated app content
 function AuthenticatedApp() {
@@ -23,21 +21,25 @@ function AuthenticatedApp() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Sync activeTab with URL when settings page is accessed
+  // Sync activeTab with URL when settings or recycle page is accessed
   useEffect(() => {
     if (location.pathname === '/settings') {
       setActiveTab('settings');
-    } else if (activeTab === 'settings') {
+    } else if (location.pathname === '/recycle') {
+      setActiveTab('recycle'); // NEW
+    } else if (activeTab === 'settings' || activeTab === 'recycle') {
       setActiveTab('overview');
     }
   }, [location.pathname]);
 
-  // Handle navigation from settings back to main app
+  // Handle navigation from settings/recycle back to main app
   const handleTabChange = (tab) => {
     if (tab === 'settings') {
       navigate('/settings');
+    } else if (tab === 'recycle') { // NEW
+      navigate('/recycle');
     } else {
-      if (location.pathname === '/settings') {
+      if (location.pathname === '/settings' || location.pathname === '/recycle') {
         navigate('/dashboard');
       }
       setActiveTab(tab);
@@ -50,6 +52,16 @@ function AuthenticatedApp() {
       <div className="min-h-screen bg-gray-50">
         <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
         <SettingsPage />
+      </div>
+    );
+  }
+
+  // NEW: Render content recycler page if on recycle route
+  if (location.pathname === '/recycle') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
+        <ContentRecyclingMachine />
       </div>
     );
   }
@@ -175,6 +187,16 @@ function App() {
           {/* Protected Settings Route */}
           <Route
             path="/settings"
+            element={
+              <ProtectedRoute>
+                <AuthenticatedApp />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* NEW: Protected Content Recycler Route */}
+          <Route
+            path="/recycle"
             element={
               <ProtectedRoute>
                 <AuthenticatedApp />

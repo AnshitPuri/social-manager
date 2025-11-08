@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, BarChart3, Wand2, Calendar, LayoutDashboard, LogIn, Settings, LogOut, Home, Link as LinkIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Sparkles, BarChart3, Wand2, Calendar, LayoutDashboard, LogIn, Settings, LogOut, Home, Link as LinkIcon, Recycle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar({ activeTab, setActiveTab }) {
@@ -18,6 +18,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
         else if (path === '/improve') setActiveTab('improve');
         else if (path === '/plan') setActiveTab('plan');
         else if (path === '/connect') setActiveTab('connect');
+        else if (path === '/recycle') setActiveTab('recycle');
         else if (path === '/overview' || path === '/') setActiveTab('overview');
         else if (path === '/settings') setActiveTab('settings');
     }, [location.pathname, setActiveTab]);
@@ -29,6 +30,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
         { id: 'analyze', label: 'Analyze', icon: BarChart3, path: '/analyze' },
         { id: 'improve', label: 'Improve', icon: Wand2, path: '/improve' },
         { id: 'plan', label: 'Plan', icon: Calendar, path: '/plan' },
+        { id: 'recycle', label: 'Recycle', icon: Recycle, path: '/recycle', special: true },
         { id: 'connect', label: 'Connect', icon: LinkIcon, path: '/connect' },
     ];
 
@@ -111,21 +113,30 @@ export default function Navbar({ activeTab, setActiveTab }) {
                             {tabs.map((tab) => {
                                 const Icon = tab.icon;
                                 const isActive = activeTab === tab.id;
+                                const isSpecial = tab.special;
 
                                 return (
                                     <motion.button
                                         key={tab.id}
                                         onClick={() => handleTabClick(tab)}
                                         className={`relative px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-sm ${
-                                            isActive ? 'text-white shadow-lg' : 'text-slate-600 hover:text-sky-600'
+                                            isActive 
+                                                ? 'text-white shadow-lg' 
+                                                : isSpecial 
+                                                ? 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                                                : 'text-slate-600 hover:text-sky-600 hover:bg-sky-50'
                                         }`}
                                         whileHover={{ scale: isActive ? 1 : 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                     >
-                                        {/* Active Tab Background */}
+                                        {/* Active Tab Background - Special gradient for Recycle */}
                                         {isActive && (
                                             <motion.div
-                                                className="absolute inset-0 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl"
+                                                className={`absolute inset-0 rounded-xl ${
+                                                    isSpecial 
+                                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
+                                                        : 'bg-gradient-to-r from-sky-500 to-blue-600'
+                                                }`}
                                                 layoutId="activeTab"
                                                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                             />
@@ -136,6 +147,24 @@ export default function Navbar({ activeTab, setActiveTab }) {
                                             {Icon && <Icon className="w-4 h-4" />}
                                             {tab.label}
                                         </span>
+
+                                        {/* Special sparkle effect for Recycle tab when not active */}
+                                        {isSpecial && !isActive && (
+                                            <motion.div
+                                                className="absolute -top-1 -right-1"
+                                                animate={{ 
+                                                    scale: [1, 1.2, 1],
+                                                    opacity: [0.5, 1, 0.5]
+                                                }}
+                                                transition={{ 
+                                                    duration: 2, 
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut"
+                                                }}
+                                            >
+                                                <Sparkles className="w-3 h-3 text-purple-500" />
+                                            </motion.div>
+                                        )}
                                     </motion.button>
                                 );
                             })}
