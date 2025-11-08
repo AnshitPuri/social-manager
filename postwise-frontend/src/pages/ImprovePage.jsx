@@ -1,17 +1,27 @@
 import React, { useState, useRef } from 'react';
-import { Wand2, Image, Type, Upload, X, Download, RefreshCw, Sparkles, Copy, Check, Eraser, PaintBucket, Crop, Zap, Plus, Minus, RotateCw, Maximize2 } from 'lucide-react';
-import api from '../services/api';
+import { Wand2, Image, Type, Upload, X, Download, RefreshCw, Sparkles, Copy, Check, Eraser, PaintBucket, Zap, Plus } from 'lucide-react';
+
+// Add your Gemini API key here
+const GEMINI_API_KEY = "AIzaSyBAv2OpTW6YOTxkIQJNwvyogwXZMSJJ1zA";
+
+// Available models - you can switch between them
+const MODELS = {
+  'flash-lite': 'gemini-2.0-flash-lite',
+  'flash': 'gemini-2.5-flash',
+  'flash-exp': 'gemini-2.0-flash-exp', // Experimental
+  'thinking-exp': 'gemini-2.0-flash-thinking-exp', // Experimental with reasoning
+};
 
 export default function ImprovePage() {
   const [activeTab, setActiveTab] = useState('text');
   const [text, setText] = useState('');
   const [tone, setTone] = useState('professional');
+  const [selectedModel, setSelectedModel] = useState('flash-lite');
   const [loading, setLoading] = useState(false);
   const [variations, setVariations] = useState(null);
   const [error, setError] = useState('');
   const [copiedIndex, setCopiedIndex] = useState(null);
 
-  // Image editing states
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [editMode, setEditMode] = useState('enhance');
@@ -19,6 +29,7 @@ export default function ImprovePage() {
   const [editedImage, setEditedImage] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageHistory, setImageHistory] = useState([]);
+  const [imageAnalysis, setImageAnalysis] = useState('');
   const fileInputRef = useRef(null);
 
   const tones = [
@@ -34,9 +45,7 @@ export default function ImprovePage() {
     { value: 'enhance', label: 'Enhance', icon: Sparkles, description: 'Improve quality & colors' },
     { value: 'remove', label: 'Remove Object', icon: Eraser, description: 'Remove unwanted elements' },
     { value: 'add', label: 'Add Element', icon: Plus, description: 'Add objects or effects' },
-    { value: 'background', label: 'Change Background', icon: PaintBucket, description: 'Replace background' },
-    { value: 'resize', label: 'Resize', icon: Maximize2, description: 'Change dimensions' },
-    { value: 'filter', label: 'Apply Filter', icon: Wand2, description: 'Add creative filters' }
+    { value: 'background', label: 'Remove Background', icon: PaintBucket, description: 'Remove background' }
   ];
 
   const handleImprove = async () => {
@@ -45,29 +54,65 @@ export default function ImprovePage() {
       return;
     }
 
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      setError('Please add your Gemini API key. Get it free from: https://aistudio.google.com/app/apikey');
+      return;
+    }
+
     setError('');
     setLoading(true);
     setVariations(null);
 
     try {
-      // Call backend API
-      const response = await api.improvePost(text, tone);
-      
-      if (!response.success) {
-        setError(response.error || 'Failed to generate improved versions');
-        return;
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Improve this social media caption in a ${tone} tone. Return ONLY valid JSON with no preamble or markdown backticks, in this exact format:
+{
+  "variations": [
+    {"text": "improved caption 1", "reason": "why this is better"},
+    {"text": "improved caption 2", "reason": "why this is better"},
+    {"text": "improved caption 3", "reason": "why this is better"}
+  ]
+}
+
+Original caption: "${text}"
+
+Make each variation unique and compelling for social media.`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.9,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API error: ${response.status}`);
       }
 
-      // Transform backend response to match UI expectations
-      const backendData = response.data.data;
-      const transformedVariations = backendData.improved.map(item => ({
-        text: item.caption,
-        reason: item.description
-      }));
+      const data = await response.json();
+      const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-      setVariations(transformedVariations);
+      const cleanText = textContent.replace(/```json\n?|```\n?/g, '').trim();
+      const parsed = JSON.parse(cleanText);
+      
+      if (parsed.variations && Array.isArray(parsed.variations)) {
+        setVariations(parsed.variations);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (err) {
-      setError('Failed to generate improved versions. Please try again.');
+      setError(`Failed to generate improved versions: ${err.message}`);
       console.error('Improve error:', err);
     } finally {
       setLoading(false);
@@ -86,6 +131,7 @@ export default function ImprovePage() {
       reader.onloadend = () => {
         setImagePreview(reader.result);
         setImageHistory([reader.result]);
+        setImageAnalysis(''); // Clear previous analysis
       };
       reader.readAsDataURL(file);
       setError('');
@@ -94,12 +140,17 @@ export default function ImprovePage() {
   };
 
   const handleImageEdit = async () => {
-    if (!selectedImage && !imagePreview) {
+    if (!imagePreview) {
       setError('Please upload an image first');
       return;
     }
 
-    if (editMode !== 'enhance' && editMode !== 'resize' && editMode !== 'filter' && !editPrompt.trim()) {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      setError('Please add your Gemini API key to enable image analysis. Get it free from: https://aistudio.google.com/app/apikey');
+      return;
+    }
+
+    if (editMode !== 'enhance' && !editPrompt.trim()) {
       setError('Please describe what you want to do');
       return;
     }
@@ -108,15 +159,56 @@ export default function ImprovePage() {
     setImageLoading(true);
 
     try {
-      // Mock AI image editing - replace with actual API when available
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const base64Image = imagePreview.split(',')[1];
       
-      // For demo, just return the same image
-      // In production, this would call an AI image editing API
-      setEditedImage(imagePreview);
-      setImageHistory(prev => [...prev, imagePreview]);
+      const prompt = editMode === 'enhance' 
+        ? 'Describe this image in detail, including colors, composition, lighting, and suggest improvements for better quality.'
+        : editMode === 'remove' 
+        ? `Analyze this image and suggest how to ${editPrompt}. Describe what needs to be removed and how the image would look after.`
+        : editMode === 'add'
+        ? `Analyze this image and suggest how to ${editPrompt}. Describe how this addition would enhance the image.`
+        : `Describe what removing the background from this image would look like.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data: base64Image
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.4,
+            topK: 32,
+            topP: 1,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || 'Image analysis failed');
+      }
+
+      const data = await response.json();
+      const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      setImageAnalysis(analysis);
+      setError('');
+      
     } catch (err) {
-      setError('Failed to edit image. Please try again.');
+      setError(err.message || 'Failed to analyze image. Please try again.');
+      console.error('Image analysis error:', err);
     } finally {
       setImageLoading(false);
     }
@@ -143,6 +235,7 @@ export default function ImprovePage() {
     setEditedImage(null);
     setEditPrompt('');
     setImageHistory([]);
+    setImageAnalysis('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -151,7 +244,6 @@ export default function ImprovePage() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent mb-3">
             AI Content Improver
@@ -161,7 +253,6 @@ export default function ImprovePage() {
           </p>
         </div>
 
-        {/* Tab Selector */}
         <div className="flex justify-center mb-8">
           <div className="bg-white rounded-2xl p-2 shadow-lg inline-flex gap-2">
             <button
@@ -189,19 +280,16 @@ export default function ImprovePage() {
           </div>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 flex items-center gap-3 max-w-4xl mx-auto">
-            <X className="w-5 h-5" />
-            {error}
+            <X className="w-5 h-5 flex-shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* Text Improver Tab */}
         {activeTab === 'text' && (
           <div className="max-w-5xl mx-auto space-y-6">
             <div className="bg-white rounded-2xl shadow-xl p-8">
-              {/* Tone Selector */}
               <div className="mb-6">
                 <label className="block text-slate-700 font-semibold mb-3 text-lg">
                   Select Tone
@@ -224,7 +312,6 @@ export default function ImprovePage() {
                 </div>
               </div>
 
-              {/* Text Input */}
               <div className="mb-6">
                 <label className="block text-slate-700 font-semibold mb-3 text-lg">
                   Your Caption
@@ -242,7 +329,6 @@ export default function ImprovePage() {
                 </div>
               </div>
 
-              {/* Improve Button */}
               <button
                 onClick={handleImprove}
                 disabled={loading || !text.trim()}
@@ -262,7 +348,6 @@ export default function ImprovePage() {
               </button>
             </div>
 
-            {/* Variations */}
             {variations && (
               <div className="space-y-4">
                 <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -285,7 +370,7 @@ export default function ImprovePage() {
                       </div>
                       <button
                         onClick={() => handleCopyVariation(variation.text, index)}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all flex-shrink-0"
                       >
                         {copiedIndex === index ? (
                           <>
@@ -307,18 +392,15 @@ export default function ImprovePage() {
           </div>
         )}
 
-        {/* Image Editor Tab */}
         {activeTab === 'image' && (
           <div className="max-w-6xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Left Panel - Upload & Edit Controls */}
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                   <Upload className="w-6 h-6 text-cyan-500" />
                   Upload & Edit
                 </h3>
 
-                {/* Image Upload */}
                 {!imagePreview ? (
                   <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-cyan-500 transition-all cursor-pointer bg-slate-50">
                     <label className="cursor-pointer block">
@@ -338,7 +420,6 @@ export default function ImprovePage() {
                   </div>
                 ) : (
                   <>
-                    {/* Current Image Preview */}
                     <div className="mb-6 relative">
                       <img
                         src={imagePreview}
@@ -353,7 +434,6 @@ export default function ImprovePage() {
                       </button>
                     </div>
 
-                    {/* Edit Mode Selector */}
                     <div className="mb-6">
                       <label className="block text-slate-700 font-semibold mb-3">
                         Edit Mode
@@ -377,8 +457,7 @@ export default function ImprovePage() {
                       </div>
                     </div>
 
-                    {/* Edit Prompt */}
-                    {editMode !== 'enhance' && editMode !== 'resize' && editMode !== 'filter' && (
+                    {editMode !== 'enhance' && editMode !== 'background' && (
                       <div className="mb-6">
                         <label className="block text-slate-700 font-semibold mb-3">
                           Describe Your Edit
@@ -388,8 +467,7 @@ export default function ImprovePage() {
                           onChange={(e) => setEditPrompt(e.target.value)}
                           placeholder={
                             editMode === 'remove' ? 'e.g., Remove the person in the background' :
-                            editMode === 'add' ? 'e.g., Add a blue sky with clouds' :
-                            editMode === 'background' ? 'e.g., Replace background with a beach scene' :
+                            editMode === 'add' ? 'e.g., Add sunglasses, add sunset background' :
                             'Describe what you want...'
                           }
                           className="w-full h-24 px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:outline-none focus:ring-4 focus:ring-cyan-200 resize-none"
@@ -398,30 +476,6 @@ export default function ImprovePage() {
                       </div>
                     )}
 
-                    {/* Quick Enhancements for Enhance Mode */}
-                    {editMode === 'enhance' && (
-                      <div className="mb-6">
-                        <label className="block text-slate-700 font-semibold mb-3">
-                          Quick Enhancements
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition-all">
-                            Brighten
-                          </button>
-                          <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition-all">
-                            Sharpen
-                          </button>
-                          <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition-all">
-                            Vivid Colors
-                          </button>
-                          <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition-all">
-                            Auto Fix
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Edit Button */}
                     <button
                       onClick={handleImageEdit}
                       disabled={imageLoading}
@@ -430,12 +484,12 @@ export default function ImprovePage() {
                       {imageLoading ? (
                         <>
                           <RefreshCw className="w-5 h-5 animate-spin" />
-                          Processing...
+                          Analyzing...
                         </>
                       ) : (
                         <>
                           <Zap className="w-5 h-5" />
-                          Apply AI Edit
+                          Analyze Image with AI
                         </>
                       )}
                     </button>
@@ -443,14 +497,52 @@ export default function ImprovePage() {
                 )}
               </div>
 
-              {/* Right Panel - Result */}
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                   <Sparkles className="w-6 h-6 text-indigo-500" />
-                  Result
+                  AI Analysis
                 </h3>
 
-                {editedImage ? (
+                {imageAnalysis ? (
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-br from-cyan-50 to-indigo-50 rounded-xl p-6 border border-cyan-200">
+                      <div className="flex items-start gap-3 mb-4">
+                        <Sparkles className="w-6 h-6 text-cyan-600 flex-shrink-0 mt-1" />
+                        <div>
+                          <h4 className="text-lg font-bold text-slate-800 mb-2">
+                            AI Vision Analysis
+                          </h4>
+                          <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                            {imageAnalysis}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">💡</div>
+                        <div className="flex-1">
+                          <h5 className="font-bold text-amber-900 mb-2">Important Note</h5>
+                          <p className="text-sm text-amber-800 leading-relaxed">
+                            This is an <strong>AI analysis and suggestions</strong> only. The Gemini API used here can analyze images and suggest improvements, but it <strong>cannot perform actual image editing</strong> (like removing objects, adding elements, or changing backgrounds).
+                          </p>
+                          <p className="text-sm text-amber-800 mt-2">
+                            For real image editing, you would need paid APIs like <strong>Stability AI</strong>, <strong>Replicate</strong>, or <strong>DALL-E</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setImageAnalysis('')}
+                      className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      Analyze Again
+                    </button>
+                  </div>
+                ) : editedImage ? (
                   <>
                     <div className="mb-6">
                       <img
@@ -479,7 +571,6 @@ export default function ImprovePage() {
                       </button>
                     </div>
 
-                    {/* History */}
                     {imageHistory.length > 1 && (
                       <div className="mt-6">
                         <h4 className="text-sm font-semibold text-slate-700 mb-3">Edit History</h4>
@@ -502,7 +593,7 @@ export default function ImprovePage() {
                     <div className="text-center">
                       <Image className="w-16 h-16 mx-auto mb-4 text-slate-300" />
                       <p className="text-slate-500 font-medium">
-                        Your edited image will appear here
+                        Upload an image and click "Analyze" to see AI suggestions
                       </p>
                     </div>
                   </div>
@@ -510,24 +601,27 @@ export default function ImprovePage() {
               </div>
             </div>
 
-            {/* AI Editing Tips */}
             <div className="mt-6 bg-gradient-to-r from-cyan-50 to-indigo-50 rounded-2xl p-6 border border-cyan-200">
               <h4 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-cyan-600" />
-                AI Editing Tips
+                About Image Analysis
               </h4>
-              <ul className="space-y-2 text-slate-700">
+              <ul className="space-y-2 text-slate-700 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-cyan-600 font-bold">•</span>
-                  <span>Be specific in your descriptions for better results</span>
+                  <span><strong>AI Vision:</strong> Gemini 2.0 Flash Lite analyzes your image and suggests improvements</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-indigo-600 font-bold">•</span>
-                  <span>Use enhance mode first to improve overall quality</span>
+                  <span><strong>Free Models:</strong> Using Gemini 2.0 Flash Lite (fast & free)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-pink-600 font-bold">•</span>
-                  <span>You can apply multiple edits by using "Edit Again"</span>
+                  <span><strong>Note:</strong> This analyzes images but doesn't edit them (requires paid APIs)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-600 font-bold">•</span>
+                  <span><strong>Text improvement:</strong> Works perfectly with Gemini - try it now!</span>
                 </li>
               </ul>
             </div>
