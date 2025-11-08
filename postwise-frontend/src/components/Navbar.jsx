@@ -1,41 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Sparkles, BarChart3, Wand2, Calendar, LayoutDashboard, LogIn, Settings, LogOut, Home, Link as LinkIcon, Recycle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, BarChart3, Wand2, Calendar, LayoutDashboard, LogIn, Settings, LogOut, Home, Link2, Recycle, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar({ activeTab, setActiveTab }) {
     const [showUserMenu, setShowUserMenu] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
 
-    // Sync activeTab with current location
+    // Close menu when clicking outside
     useEffect(() => {
-        const path = location.pathname;
-        if (path === '/dashboard') setActiveTab('dashboard');
-        else if (path === '/analyze') setActiveTab('analyze');
-        else if (path === '/improve') setActiveTab('improve');
-        else if (path === '/plan') setActiveTab('plan');
-        else if (path === '/connect') setActiveTab('connect');
-        else if (path === '/recycle') setActiveTab('recycle');
-        else if (path === '/overview' || path === '/') setActiveTab('overview');
-        else if (path === '/settings') setActiveTab('settings');
-    }, [location.pathname, setActiveTab]);
+        const handleClickOutside = (event) => {
+            if (showUserMenu && !event.target.closest('.user-menu-container')) {
+                setShowUserMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showUserMenu]);
 
-    // Define tabs based on authentication status
+    // Define tabs
     const authenticatedTabs = [
-        { id: 'overview', label: 'Admin Dash', icon: Home, path: '/overview' },
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-        { id: 'analyze', label: 'Analyze', icon: BarChart3, path: '/analyze' },
-        { id: 'improve', label: 'Improve', icon: Wand2, path: '/improve' },
-        { id: 'plan', label: 'Plan', icon: Calendar, path: '/plan' },
-        { id: 'recycle', label: 'Recycle', icon: Recycle, path: '/recycle', special: true },
-        { id: 'connect', label: 'Connect', icon: LinkIcon, path: '/connect' },
+        { id: 'overview', label: 'Admin', icon: Home },
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'analyze', label: 'Analyze', icon: BarChart3 },
+        { id: 'improve', label: 'Improve', icon: Wand2 },
+        { id: 'plan', label: 'Plan', icon: Calendar },
+        { id: 'recycle', label: 'Recycle', icon: Recycle },
+        { id: 'crisis', label: 'Crisis', icon: AlertTriangle },
+        { id: 'connect', label: 'Connect', icon: Link2 },
     ];
 
     const publicTabs = [
-        { id: 'overview', label: 'Home', icon: Home, path: '/' },
+        { id: 'overview', label: 'Home', icon: Home },
     ];
 
     const tabs = user ? authenticatedTabs : publicTabs;
@@ -43,7 +41,6 @@ export default function Navbar({ activeTab, setActiveTab }) {
     const handleLogout = async () => {
         try {
             await logout();
-            setActiveTab('overview');
             navigate('/login');
             setShowUserMenu(false);
         } catch (error) {
@@ -57,17 +54,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
     const handleTabClick = (tab) => {
         setActiveTab(tab.id);
-        navigate(tab.path);
     };
 
     const handleLogoClick = () => {
-        if (user) {
-            setActiveTab('overview');
-            navigate('/overview');
-        } else {
-            setActiveTab('overview');
-            navigate('/');
-        }
+        setActiveTab('overview');
     };
 
     const getUserInitials = () => {
@@ -82,196 +72,133 @@ export default function Navbar({ activeTab, setActiveTab }) {
     };
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-sky-200/50 shadow-lg">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-20">
+        <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+            <div className="max-w-7xl mx-auto px-6">
+                <div className="flex justify-between items-center h-16">
                     
-                    {/* Logo - Animated & Gradient */}
-                    <motion.div
-                        className="flex items-center gap-3 cursor-pointer"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                    {/* Logo */}
+                    <button
                         onClick={handleLogoClick}
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                     >
-                        <motion.div
-                            className="relative"
-                            animate={{ rotate: [0, 360] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                        >
-                            <Sparkles className="w-8 h-8 text-sky-500" />
-                        </motion.div>
-                        <span className="text-3xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
+                        <Sparkles className="w-6 h-6 text-sky-500" />
+                        <span className="text-xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
                             PostWise AI
                         </span>
-                    </motion.div>
+                    </button>
 
-                    {/* Navigation Tabs (Flex container for Tabs and Auth Buttons) */}
-                    <div className="flex items-center gap-4"> 
+                    {/* Navigation & Auth */}
+                    <div className="flex items-center gap-8"> 
                         
-                        {/* Navigation Tabs - Modern Animated Styling */}
-                        <div className="hidden md:flex items-center gap-2 bg-sky-50/50 backdrop-blur-sm rounded-2xl p-1.5 border border-sky-200/50">
+                        {/* Navigation Tabs */}
+                        <div className="hidden lg:flex items-center gap-1">
                             {tabs.map((tab) => {
                                 const Icon = tab.icon;
                                 const isActive = activeTab === tab.id;
-                                const isSpecial = tab.special;
 
                                 return (
-                                    <motion.button
+                                    <button
                                         key={tab.id}
                                         onClick={() => handleTabClick(tab)}
-                                        className={`relative px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 text-sm ${
+                                        className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
                                             isActive 
-                                                ? 'text-white shadow-lg' 
-                                                : isSpecial 
-                                                ? 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
-                                                : 'text-slate-600 hover:text-sky-600 hover:bg-sky-50'
+                                                ? 'text-white bg-sky-500' 
+                                                : 'text-gray-600 hover:text-sky-600 hover:bg-sky-50'
                                         }`}
-                                        whileHover={{ scale: isActive ? 1 : 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
                                     >
-                                        {/* Active Tab Background - Special gradient for Recycle */}
-                                        {isActive && (
-                                            <motion.div
-                                                className={`absolute inset-0 rounded-xl ${
-                                                    isSpecial 
-                                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
-                                                        : 'bg-gradient-to-r from-sky-500 to-blue-600'
-                                                }`}
-                                                layoutId="activeTab"
-                                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                            />
-                                        )}
-
-                                        {/* Icon and Label */}
-                                        <span className="relative z-10 flex items-center gap-2">
-                                            {Icon && <Icon className="w-4 h-4" />}
-                                            {tab.label}
-                                        </span>
-
-                                        {/* Special sparkle effect for Recycle tab when not active */}
-                                        {isSpecial && !isActive && (
-                                            <motion.div
-                                                className="absolute -top-1 -right-1"
-                                                animate={{ 
-                                                    scale: [1, 1.2, 1],
-                                                    opacity: [0.5, 1, 0.5]
-                                                }}
-                                                transition={{ 
-                                                    duration: 2, 
-                                                    repeat: Infinity,
-                                                    ease: "easeInOut"
-                                                }}
-                                            >
-                                                <Sparkles className="w-3 h-3 text-purple-500" />
-                                            </motion.div>
-                                        )}
-                                    </motion.button>
+                                        <Icon className="w-4 h-4" />
+                                        {tab.label}
+                                    </button>
                                 );
                             })}
                         </div>
                         
-                        {/* Auth Section - Login Button or User Menu */}
+                        {/* Auth Section */}
                         {user ? (
-                            // User Menu - Shown when authenticated
-                            <div className="relative">
+                            // User Menu
+                            <div className="relative user-menu-container">
                                 <button
                                     onClick={() => setShowUserMenu(!showUserMenu)}
-                                    className="flex items-center space-x-3 focus:outline-none p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    {/* User Avatar or Initials */}
+                                    {/* Avatar */}
                                     {user?.photoURL ? (
                                         <img
                                             src={user.photoURL}
                                             alt="Profile"
-                                            className="w-10 h-10 rounded-full border-2 border-sky-300"
-                                            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/40x40/B3E5FC/0288D1?text=U" }}
+                                            className="w-8 h-8 rounded-full border-2 border-sky-300"
+                                            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/32x32/B3E5FC/0288D1?text=U" }}
                                         />
                                     ) : (
-                                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center font-semibold text-sm">
                                             {getUserInitials()}
                                         </div>
                                     )}
                                     
                                     {/* Dropdown Arrow */}
-                                    <svg
-                                        className={`w-5 h-5 text-gray-600 transition-transform hidden sm:block ${
+                                    <ChevronDown 
+                                        className={`w-4 h-4 text-gray-500 transition-transform ${
                                             showUserMenu ? 'rotate-180' : ''
                                         }`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M19 9l-7 7-7-7"
-                                        />
-                                    </svg>
+                                    />
                                 </button>
 
-                                {showUserMenu && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="absolute right-0 mt-3 w-60 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 origin-top-right"
-                                    >
-                                        <div className="px-4 py-3 border-b border-gray-100">
-                                            <p className="text-sm font-bold text-gray-900">
-                                                {user?.displayName || 'User'}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                                        </div>
-                                        
-                                        {/* Settings Link */}
-                                        <button
-                                            onClick={() => { 
-                                                navigate('/settings'); 
-                                                setShowUserMenu(false); 
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 flex items-center gap-2 hover:bg-sky-50 transition-colors"
+                                {/* Dropdown Menu */}
+                                <AnimatePresence>
+                                    {showUserMenu && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 10 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden"
                                         >
-                                            <Settings className="w-4 h-4 text-sky-500" />
-                                            Account Settings
-                                        </button>
+                                            {/* User Info */}
+                                            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                                                <p className="text-sm font-semibold text-gray-900 truncate">
+                                                    {user?.displayName || 'User'}
+                                                </p>
+                                                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                                            </div>
+                                            
+                                            {/* Menu Items */}
+                                            <div className="py-1">
+                                                <button
+                                                    onClick={() => { 
+                                                        setActiveTab('settings');
+                                                        setShowUserMenu(false); 
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                                                >
+                                                    <Settings className="w-4 h-4 text-gray-400" />
+                                                    Settings
+                                                </button>
 
-                                        {/* Logout Button */}
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2 text-sm text-red-600 flex items-center gap-2 hover:bg-red-50 transition-colors"
-                                        >
-                                            <LogOut className="w-4 h-4" />
-                                            Sign Out
-                                        </button>
-                                    </motion.div>
-                                )}
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    Sign Out
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ) : (
-                            // Login Button - Shown when not authenticated
-                            <motion.button
+                            // Login Button
+                            <button
                                 onClick={handleLoginClick}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium text-sm transition-colors"
                             >
                                 <LogIn className="w-4 h-4" />
                                 Login
-                            </motion.button>
+                            </button>
                         )}
                     </div>
                 </div>
             </div>
-
-            {/* Animated underline across the bottom */}
-            <motion.div
-                className="h-1 bg-gradient-to-r from-sky-400 via-blue-500 to-sky-400"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                style={{ transformOrigin: "left" }}
-            />
         </nav>
     );
 }

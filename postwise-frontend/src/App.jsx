@@ -13,7 +13,8 @@ import DashboardPage from './pages/DashboardPage';
 import ConnectAccountsPage from './pages/ConnectAccountsPage';
 import SiteOverviewPage from './pages/SiteOverviewPage';
 import SettingsPage from './pages/Settings';
-import ContentRecyclingMachine from './pages/ContentRecyclingMachine'; // NEW IMPORT
+import ContentRecyclingMachine from './pages/ContentRecyclingMachine';
+import CrisisManagementAI from './pages/CrisisManagementAI'; // NEW
 
 // Main authenticated app content
 function AuthenticatedApp() {
@@ -21,55 +22,60 @@ function AuthenticatedApp() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Sync activeTab with URL when settings or recycle page is accessed
+  // Sync activeTab with URL
   useEffect(() => {
-    if (location.pathname === '/settings') {
+    const path = location.pathname;
+    
+    if (path === '/settings') {
       setActiveTab('settings');
-    } else if (location.pathname === '/recycle') {
-      setActiveTab('recycle'); // NEW
-    } else if (activeTab === 'settings' || activeTab === 'recycle') {
+    } else if (path === '/recycle') {
+      setActiveTab('recycle');
+    } else if (path === '/crisis') {
+      setActiveTab('crisis'); // NEW
+    } else if (path === '/dashboard') {
+      setActiveTab('dashboard');
+    } else if (path === '/analyze') {
+      setActiveTab('analyze');
+    } else if (path === '/improve') {
+      setActiveTab('improve');
+    } else if (path === '/plan') {
+      setActiveTab('plan');
+    } else if (path === '/connect') {
+      setActiveTab('connect');
+    } else if (path === '/overview') {
       setActiveTab('overview');
     }
   }, [location.pathname]);
 
-  // Handle navigation from settings/recycle back to main app
+  // Handle tab changes from Navbar
   const handleTabChange = (tab) => {
-    if (tab === 'settings') {
-      navigate('/settings');
-    } else if (tab === 'recycle') { // NEW
-      navigate('/recycle');
-    } else {
-      if (location.pathname === '/settings' || location.pathname === '/recycle') {
-        navigate('/dashboard');
-      }
-      setActiveTab(tab);
+    // Navigate based on tab
+    const routes = {
+      settings: '/settings',
+      recycle: '/recycle',
+      crisis: '/crisis', // NEW
+      dashboard: '/dashboard',
+      analyze: '/analyze',
+      improve: '/improve',
+      plan: '/plan',
+      connect: '/connect',
+      overview: '/overview'
+    };
+    
+    if (routes[tab]) {
+      navigate(routes[tab]);
     }
   };
 
-  // Render settings page if on settings route
-  if (location.pathname === '/settings') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
-        <SettingsPage />
-      </div>
-    );
-  }
-
-  // NEW: Render content recycler page if on recycle route
-  if (location.pathname === '/recycle') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
-        <ContentRecyclingMachine />
-      </div>
-    );
-  }
-
+  // Render based on current route
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
-
+      
+      {/* Render the appropriate page based on activeTab */}
+      {activeTab === 'settings' && <SettingsPage />}
+      {activeTab === 'recycle' && <ContentRecyclingMachine />}
+      {activeTab === 'crisis' && <CrisisManagementAI />} {/* NEW */}
       {activeTab === 'dashboard' && <DashboardPage />}
       {activeTab === 'analyze' && <AnalyzePage />}
       {activeTab === 'improve' && <ImprovePage />}
@@ -106,7 +112,7 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// Public route wrapper (redirects to dashboard if already logged in)
+// Public route wrapper
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -133,7 +139,6 @@ function PublicRoute({ children }) {
 }
 
 function App() {
-
   useEffect(() => {
     // Test backend connection
     fetch('http://localhost:5000/api/health')
@@ -147,114 +152,24 @@ function App() {
       <Router>
         <Routes>
           {/* Public Home Page */}
-          <Route
-            path="/"
-            element={
-              <PublicRoute>
-                <HomePage />
-              </PublicRoute>
-            }
-          />
+          <Route path="/" element={<PublicRoute><HomePage /></PublicRoute>} />
 
           {/* Public Auth Routes */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <LoginPage />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              <PublicRoute>
-                <SignupPage />
-              </PublicRoute>
-            }
-          />
+          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
 
-          {/* Protected Dashboard Route */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
+          {/* All Protected Routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/recycle" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/crisis" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} /> {/* NEW */}
+          <Route path="/analyze" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/improve" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/plan" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/connect" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/overview" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
 
-          {/* Protected Settings Route */}
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* NEW: Protected Content Recycler Route */}
-          <Route
-            path="/recycle"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Protected Feature Routes */}
-          <Route
-            path="/analyze"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/improve"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/plan"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/connect"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/overview"
-            element={
-              <ProtectedRoute>
-                <AuthenticatedApp />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Fallback - redirect to home or dashboard */}
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
