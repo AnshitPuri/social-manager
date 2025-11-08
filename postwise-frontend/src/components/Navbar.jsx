@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, BarChart3, Wand2, Calendar, LayoutDashboard, LogIn, Settings, LogOut, Home, Link2, Recycle, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Sparkles, BarChart3, Wand2, Calendar, LayoutDashboard, LogIn, Settings, LogOut, Home, Link2, Recycle, AlertTriangle, TrendingUp, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar({ activeTab, setActiveTab }) {
@@ -29,6 +29,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
         { id: 'plan', label: 'Plan', icon: Calendar },
         { id: 'recycle', label: 'Recycle', icon: Recycle },
         { id: 'crisis', label: 'Crisis', icon: AlertTriangle },
+        { id: 'trends', label: 'Trends', icon: TrendingUp },
         { id: 'connect', label: 'Connect', icon: Link2 },
     ];
 

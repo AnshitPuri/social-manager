@@ -14,7 +14,9 @@ import ConnectAccountsPage from './pages/ConnectAccountsPage';
 import SiteOverviewPage from './pages/SiteOverviewPage';
 import SettingsPage from './pages/Settings';
 import ContentRecyclingMachine from './pages/ContentRecyclingMachine';
-import CrisisManagementAI from './pages/CrisisManagementAI'; // NEW
+import CrisisManagementAI from './pages/CrisisManagementAI';
+import TrendHijackingPage from './pages/TrendHijackingPage';
+
 
 // Main authenticated app content
 function AuthenticatedApp() {
@@ -31,7 +33,9 @@ function AuthenticatedApp() {
     } else if (path === '/recycle') {
       setActiveTab('recycle');
     } else if (path === '/crisis') {
-      setActiveTab('crisis'); // NEW
+      setActiveTab('crisis');
+    } else if (path === '/trends') {
+      setActiveTab('trends');
     } else if (path === '/dashboard') {
       setActiveTab('dashboard');
     } else if (path === '/analyze') {
@@ -53,7 +57,8 @@ function AuthenticatedApp() {
     const routes = {
       settings: '/settings',
       recycle: '/recycle',
-      crisis: '/crisis', // NEW
+      crisis: '/crisis',
+      trends: '/trends',
       dashboard: '/dashboard',
       analyze: '/analyze',
       improve: '/improve',
@@ -75,7 +80,8 @@ function AuthenticatedApp() {
       {/* Render the appropriate page based on activeTab */}
       {activeTab === 'settings' && <SettingsPage />}
       {activeTab === 'recycle' && <ContentRecyclingMachine />}
-      {activeTab === 'crisis' && <CrisisManagementAI />} {/* NEW */}
+      {activeTab === 'crisis' && <CrisisManagementAI />}
+      {activeTab === 'trends' && <TrendHijackingPage />}
       {activeTab === 'dashboard' && <DashboardPage />}
       {activeTab === 'analyze' && <AnalyzePage />}
       {activeTab === 'improve' && <ImprovePage />}
@@ -162,7 +168,8 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
           <Route path="/recycle" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
-          <Route path="/crisis" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} /> {/* NEW */}
+          <Route path="/crisis" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
+          <Route path="/trends" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
           <Route path="/analyze" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
           <Route path="/improve" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
           <Route path="/plan" element={<ProtectedRoute><AuthenticatedApp /></ProtectedRoute>} />
