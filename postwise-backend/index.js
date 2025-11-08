@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-// Import routes
 import analyzeRoutes from './routes/analyze.js';
 import improveRoutes from './routes/improve.js';
 import planRoutes from './routes/plan.js';
@@ -11,10 +10,8 @@ import accountsRoutes from './routes/accounts.js';
 import analyticsRoutes from './routes/analytics.js';
 import overviewRoutes from './routes/overview.js';
 
-// Initialize Firebase Admin (must be before routes)
 import './firebaseAdmin.js';
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -22,11 +19,6 @@ const PORT = process.env.PORT || 5000;
 app.use(cors()); 
 app.use(express.json());
 
-// ============================================
-// MIDDLEWARE
-// ============================================
-
-// CORS - Allow requests from your Vite frontend
 app.use(cors({
   origin: [
     'http://localhost:5173',  // Vite default
@@ -38,11 +30,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging middleware (development)
 if (process.env.NODE_ENV === 'development') {
   app.use((req, res, next) => {
     console.log(`📨 ${req.method} ${req.path}`);
@@ -50,11 +40,6 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// ============================================
-// ROUTES
-// ============================================
-
-// Health check (no auth required)
 app.get('/', (req, res) => {
   res.json({ 
     message: '🚀 PostWise AI Backend',
@@ -74,7 +59,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes - Protected by auth middleware inside each route
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/improve', improveRoutes);
 app.use('/api/plan', planRoutes);
@@ -84,12 +68,6 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/overview', overviewRoutes);
 
 
-
-// ============================================
-// ERROR HANDLING
-// ============================================
-
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
     error: 'Route not found',
@@ -97,7 +75,6 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.message);
   console.error(err.stack);
@@ -111,9 +88,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ============================================
-// START SERVER
-// ============================================
 
 app.listen(PORT, () => {
   console.log('\n🎉 ═══════════════════════════════════════');

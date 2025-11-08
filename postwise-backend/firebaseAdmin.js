@@ -4,9 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// ============================================
-// LOAD SERVICE ACCOUNT KEY
-// ============================================
+
 let serviceAccount;
 try {
   const serviceAccountPath = './serviceAccountKey.json';
@@ -19,9 +17,6 @@ try {
   process.exit(1);
 }
 
-// ============================================
-// INITIALIZE FIREBASE ADMIN
-// ============================================
 try {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -34,9 +29,6 @@ try {
   process.exit(1);
 }
 
-// ============================================
-// EXPORT FIRESTORE & AUTH
-// ============================================
 export const db = admin.firestore();
 export const auth = admin.auth();
 export default admin;

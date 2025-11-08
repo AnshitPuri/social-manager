@@ -37,7 +37,6 @@ const platforms = [
   }
 ];
 
-// Mock API - Replace with your backend endpoint
 const recycleContent = async (postUrl, targetPlatforms) => {
   await new Promise(resolve => setTimeout(resolve, 2000));
   

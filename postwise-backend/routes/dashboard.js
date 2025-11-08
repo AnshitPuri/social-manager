@@ -4,35 +4,25 @@ import { db } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-/**
- * GET /api/dashboard/stats
- * Returns dashboard statistics for the authenticated user
- */
 router.get('/stats', verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
 
     console.log(`📊 Fetching dashboard stats for user: ${uid}`);
 
-    // ============================================
-    // FETCH USER DATA FROM FIRESTORE
-    // ============================================
-    
-    // Get connected accounts
+
     const accountsSnapshot = await db
       .collection('social_accounts')
       .where('userId', '==', uid)
       .get();
     
     const accounts = accountsSnapshot.docs.map(doc => doc.data());
-    
-    // Get analyses count
+   
     const analysesSnapshot = await db
       .collection('analyses')
       .where('userId', '==', uid)
       .get();
     
-    // Calculate stats
     const totalAccounts = accounts.length;
     const totalFollowers = accounts.reduce((sum, acc) => sum + (acc.followers || 0), 0);
     const avgEngagement = accounts.length > 0
@@ -40,9 +30,6 @@ router.get('/stats', verifyToken, async (req, res) => {
       : 0;
     const postsAnalyzed = analysesSnapshot.size;
 
-    // ============================================
-    // RESPONSE DATA
-    // ============================================
     const stats = {
       totalAccounts,
       totalFollowers,
@@ -69,10 +56,6 @@ router.get('/stats', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
 });
-
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
 async function getRecentActivity(userId) {
   try {

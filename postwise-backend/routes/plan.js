@@ -4,11 +4,6 @@ import { db } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-/**
- * POST /api/plan
- * Generates content ideas based on niche
- * Body: { niche: string, platform?: string }
- */
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { niche, platform = 'all' } = req.body;
@@ -19,19 +14,10 @@ router.post('/', verifyToken, async (req, res) => {
     }
 
     console.log(`💡 Generating content ideas for niche: ${niche}`);
-
-    // ============================================
-    // GENERATE CONTENT IDEAS
-    // ============================================
-    
-    // TODO: Replace with actual OpenAI API call
-    // const ideas = await generateIdeasWithOpenAI(niche, platform);
     
     const ideas = generateContentIdeas(niche, platform);
 
-    // ============================================
-    // SAVE TO FIRESTORE
-    // ============================================
+
     await db.collection('content_plans').add({
       userId: uid,
       niche,
@@ -56,9 +42,6 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
 function generateContentIdeas(niche, platform) {
   const times = ['9:00 AM', '1:00 PM', '5:00 PM', '8:00 PM'];

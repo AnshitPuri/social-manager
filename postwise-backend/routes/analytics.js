@@ -4,10 +4,6 @@ import { db } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-/**
- * GET /api/analytics
- * Get analytics data for charts
- */
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
@@ -15,11 +11,6 @@ router.get('/', verifyToken, async (req, res) => {
 
     console.log(`📈 Fetching analytics for user: ${uid}`);
 
-    // ============================================
-    // GENERATE ANALYTICS DATA
-    // ============================================
-    
-    // TODO: Replace with real data from Firestore/social APIs
     const analytics = {
       followerGrowth: generateFollowerGrowth(timeRange),
       engagementOverTime: generateEngagementData(timeRange),
@@ -51,10 +42,6 @@ router.get('/', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 });
-
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
 function generateFollowerGrowth(timeRange) {
   const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;

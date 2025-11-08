@@ -4,47 +4,33 @@ import { db } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-/**
- * GET /api/overview
- * Get system-wide overview and statistics
- */
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { uid, email } = req.user;
 
     console.log(`📊 Fetching overview for user: ${email}`);
 
-    // ============================================
-    // FETCH AGGREGATED DATA
-    // ============================================
-    
-    // Total posts analyzed
     const analysesSnapshot = await db
       .collection('analyses')
       .where('userId', '==', uid)
       .get();
     
-    // Total content improvements generated
     const improvementsSnapshot = await db
       .collection('improvements')
       .where('userId', '==', uid)
       .get();
-    
-    // Total content plans created
+
     const plansSnapshot = await db
       .collection('content_plans')
       .where('userId', '==', uid)
       .get();
     
-    // Connected accounts
+
     const accountsSnapshot = await db
       .collection('social_accounts')
       .where('userId', '==', uid)
       .get();
 
-    // ============================================
-    // CALCULATE STATS
-    // ============================================
     const overview = {
       totalAnalyses: analysesSnapshot.size,
       totalImprovements: improvementsSnapshot.size,
@@ -89,19 +75,14 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-/**
- * GET /api/overview/activity
- * Get recent activity timeline
- */
 router.get('/activity', verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
     const { limit = 20 } = req.query;
 
-    // Fetch recent activities from multiple collections
+
     const activities = [];
 
-    // Get recent analyses
     const analysesSnapshot = await db
       .collection('analyses')
       .where('userId', '==', uid)
@@ -145,7 +126,6 @@ router.get('/activity', verifyToken, async (req, res) => {
       });
     });
 
-    // Sort by timestamp
     activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     res.json({

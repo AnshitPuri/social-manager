@@ -4,11 +4,6 @@ import { db } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-/**
- * POST /api/analyze
- * Analyzes post content for sentiment, readability, hashtags, emojis
- * Body: { content: string }
- */
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { content } = req.body;
@@ -20,35 +15,21 @@ router.post('/', verifyToken, async (req, res) => {
 
     console.log(`📊 Analyzing post for user: ${email}`);
 
-    // ============================================
-    // ANALYSIS LOGIC
-    // ============================================
-
-    // 1. Sentiment Analysis (simple implementation)
     const sentimentScore = analyzeSentiment(content);
     
-    // 2. Readability Score (Flesch Reading Ease approximation)
     const readabilityScore = calculateReadability(content);
     
-    // 3. Hashtag Count
     const hashtags = content.match(/#[\w]+/g) || [];
     const hashtagCount = hashtags.length;
     
-    // 4. Emoji Count
     const emojiCount = (content.match(/[\p{Emoji}]/gu) || []).length;
     
-    // 5. Word Count
     const wordCount = content.trim().split(/\s+/).length;
     
-    // 6. Character Count
     const charCount = content.length;
     
-    // 7. AI Feedback (placeholder - integrate OpenAI here)
     const feedback = generateFeedback(sentimentScore, readabilityScore, hashtagCount);
 
-    // ============================================
-    // RESPONSE DATA
-    // ============================================
     const analysisResult = {
       sentiment: sentimentScore,
       readability: readabilityScore,
@@ -61,9 +42,6 @@ router.post('/', verifyToken, async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    // ============================================
-    // SAVE TO FIRESTORE (optional)
-    // ============================================
     await db.collection('analyses').add({
       userId: uid,
       content,
@@ -82,16 +60,13 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
 function analyzeSentiment(text) {
   const positiveWords = ['good', 'great', 'awesome', 'amazing', 'excellent', 'love', 'best'];
   const negativeWords = ['bad', 'worst', 'terrible', 'awful', 'hate', 'horrible'];
   
   const lowerText = text.toLowerCase();
-  let score = 50; // neutral
+  let score = 50; 
   
   positiveWords.forEach(word => {
     if (lowerText.includes(word)) score += 10;
@@ -113,7 +88,6 @@ function calculateReadability(text) {
   
   if (sentences === 0 || words === 0) return 50;
   
-  // Simplified Flesch Reading Ease
   const score = 206.835 - 1.015 * (words / sentences) - 84.6 * (syllables / words);
   return Math.max(0, Math.min(100, Math.round(score)));
 }

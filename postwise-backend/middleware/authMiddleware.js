@@ -1,13 +1,9 @@
 import { auth } from '../firebaseAdmin.js';
 
-/**
- * Middleware to verify Firebase ID token from frontend
- * Extracts token from Authorization header: "Bearer "
- * Attaches decoded user info to req.user
- */
+
 export const verifyToken = async (req, res, next) => {
   try {
-    // Get token from Authorization header
+
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -17,13 +13,13 @@ export const verifyToken = async (req, res, next) => {
       });
     }
 
-    // Extract token
+
     const token = authHeader.split('Bearer ')[1];
 
-    // Verify token with Firebase Admin
+
     const decodedToken = await auth.verifyIdToken(token);
     
-    // Attach user info to request
+ 
     req.user = {
       uid: decodedToken.uid,
       email: decodedToken.email,
@@ -46,9 +42,6 @@ export const verifyToken = async (req, res, next) => {
   }
 };
 
-/**
- * Optional middleware - check if user exists in Firestore
- */
 export const checkUserExists = async (req, res, next) => {
   try {
     const { uid } = req.user;

@@ -3,16 +3,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// ============================================
-// INITIALIZE OPENAI
-// ============================================
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/**
- * Analyze content with OpenAI
- */
+
 export const analyzeWithAI = async (content) => {
   try {
     const completion = await openai.chat.completions.create({
@@ -38,9 +33,7 @@ export const analyzeWithAI = async (content) => {
   }
 };
 
-/**
- * Generate improved captions
- */
+
 export const generateImprovedCaptions = async (content, tone) => {
   try {
     const completion = await openai.chat.completions.create({
@@ -66,9 +59,7 @@ export const generateImprovedCaptions = async (content, tone) => {
   }
 };
 
-/**
- * Generate content ideas
- */
+
 export const generateContentIdeas = async (niche, platform) => {
   try {
     const completion = await openai.chat.completions.create({

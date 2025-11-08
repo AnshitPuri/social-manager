@@ -4,10 +4,7 @@ import { db } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-/**
- * GET /api/accounts
- * Get all connected social accounts for user
- */
+
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
@@ -33,11 +30,7 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-/**
- * POST /api/accounts/connect
- * Connect a new social media account
- * Body: { platform, username, accessToken, etc. }
- */
+
 router.post('/connect', verifyToken, async (req, res) => {
   try {
     const { uid, email } = req.user;
@@ -49,16 +42,14 @@ router.post('/connect', verifyToken, async (req, res) => {
 
     console.log(`🔗 Connecting ${platform} account for user: ${email}`);
 
-    // ============================================
-    // SAVE TO FIRESTORE
-    // ============================================
+  
     const accountData = {
       userId: uid,
       platform,
       username,
-      accessToken: accessToken || null, // Store securely in production
-      followers: Math.floor(Math.random() * 10000), // Placeholder
-      engagement: Math.floor(Math.random() * 100) / 10, // Placeholder
+      accessToken: accessToken || null,
+      followers: Math.floor(Math.random() * 10000),
+      engagement: Math.floor(Math.random() * 100) / 10, 
       profilePic: null,
       isConnected: true,
       connectedAt: new Date(),
@@ -82,16 +73,13 @@ router.post('/connect', verifyToken, async (req, res) => {
   }
 });
 
-/**
- * DELETE /api/accounts/:accountId
- * Disconnect a social media account
- */
+
 router.delete('/:accountId', verifyToken, async (req, res) => {
   try {
     const { uid } = req.user;
     const { accountId } = req.params;
 
-    // Verify ownership
+
     const accountDoc = await db.collection('social_accounts').doc(accountId).get();
     
     if (!accountDoc.exists) {
@@ -102,7 +90,6 @@ router.delete('/:accountId', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    // Delete account
     await db.collection('social_accounts').doc(accountId).delete();
 
     res.json({

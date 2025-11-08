@@ -4,11 +4,7 @@ import { db } from '../firebaseAdmin.js';
 
 const router = express.Router();
 
-/**
- * POST /api/improve
- * Generates improved versions of caption in different tones
- * Body: { content: string, tone: 'professional' | 'friendly' | 'funny' }
- */
+
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { content, tone = 'professional' } = req.body;
@@ -20,14 +16,8 @@ router.post('/', verifyToken, async (req, res) => {
 
     console.log(`✨ Generating improved captions (${tone}) for user: ${email}`);
 
-    // ============================================
-    // GENERATE IMPROVED VERSIONS (Placeholder)
-    // ============================================
     const improvedVersions = generateImprovedCaptions(content, tone);
 
-    // ============================================
-    // SAVE TO FIRESTORE
-    // ============================================
     await db.collection('improvements').add({
       userId: uid,
       originalContent: content,
@@ -51,9 +41,7 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
-// ============================================
-// HELPER FUNCTION
-// ============================================
+
 function generateImprovedCaptions(content, tone) {
   const versions = [];
 
