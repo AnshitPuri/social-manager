@@ -1,22 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { Wand2, Image, Type, Upload, X, Download, RefreshCw, Sparkles, Copy, Check, Eraser, PaintBucket, Zap, Plus } from 'lucide-react';
 
-// Add your Gemini API key here
-const GEMINI_API_KEY = "AIzaSyBAv2OpTW6YOTxkIQJNwvyogwXZMSJJ1zA";
-
-// Available models - you can switch between them
-const MODELS = {
-  'flash-lite': 'gemini-2.0-flash-lite',
-  'flash': 'gemini-2.5-flash',
-  'flash-exp': 'gemini-2.0-flash-exp', // Experimental
-  'thinking-exp': 'gemini-2.0-flash-thinking-exp', // Experimental with reasoning
-};
+// Get API keys from environment variables
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const STABILITY_API_KEY = import.meta.env.VITE_STABILITY_API_KEY;
 
 export default function ImprovePage() {
   const [activeTab, setActiveTab] = useState('text');
   const [text, setText] = useState('');
   const [tone, setTone] = useState('professional');
-  const [selectedModel, setSelectedModel] = useState('flash-lite');
   const [loading, setLoading] = useState(false);
   const [variations, setVariations] = useState(null);
   const [error, setError] = useState('');
@@ -29,7 +21,6 @@ export default function ImprovePage() {
   const [editedImage, setEditedImage] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageHistory, setImageHistory] = useState([]);
-  const [imageAnalysis, setImageAnalysis] = useState('');
   const fileInputRef = useRef(null);
 
   const tones = [
@@ -42,10 +33,10 @@ export default function ImprovePage() {
   ];
 
   const editModes = [
-    { value: 'enhance', label: 'Enhance', icon: Sparkles, description: 'Improve quality & colors' },
-    { value: 'remove', label: 'Remove Object', icon: Eraser, description: 'Remove unwanted elements' },
-    { value: 'add', label: 'Add Element', icon: Plus, description: 'Add objects or effects' },
-    { value: 'background', label: 'Remove Background', icon: PaintBucket, description: 'Remove background' }
+    { value: 'enhance', label: 'Enhance Quality', icon: Sparkles, description: 'Improve clarity & colors', apiMode: 'image-to-image' },
+    { value: 'remove', label: 'Remove Object', icon: Eraser, description: 'Remove unwanted elements', apiMode: 'inpaint' },
+    { value: 'add', label: 'Add Element', icon: Plus, description: 'Add objects or effects', apiMode: 'image-to-image' },
+    { value: 'background', label: 'Change Background', icon: PaintBucket, description: 'Replace or remove background', apiMode: 'image-to-image' }
   ];
 
   const handleImprove = async () => {
@@ -54,8 +45,8 @@ export default function ImprovePage() {
       return;
     }
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-      setError('Please add your Gemini API key. Get it free from: https://aistudio.google.com/app/apikey');
+    if (!GEMINI_API_KEY) {
+      setError('Please add your Gemini API key to .env file as VITE_GEMINI_API_KEY. Get it free from: https://aistudio.google.com/app/apikey');
       return;
     }
 
@@ -131,7 +122,6 @@ Make each variation unique and compelling for social media.`
       reader.onloadend = () => {
         setImagePreview(reader.result);
         setImageHistory([reader.result]);
-        setImageAnalysis(''); // Clear previous analysis
       };
       reader.readAsDataURL(file);
       setError('');
@@ -139,19 +129,19 @@ Make each variation unique and compelling for social media.`
     }
   };
 
-  const handleImageEdit = async () => {
+  const handleRealImageEdit = async () => {
     if (!imagePreview) {
       setError('Please upload an image first');
       return;
     }
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-      setError('Please add your Gemini API key to enable image analysis. Get it free from: https://aistudio.google.com/app/apikey');
+    if (!STABILITY_API_KEY) {
+      setError('Please add your Stability AI API key to .env file as VITE_STABILITY_API_KEY. Get it from: https://platform.stability.ai/');
       return;
     }
 
-    if (editMode !== 'enhance' && !editPrompt.trim()) {
-      setError('Please describe what you want to do');
+    if (!editPrompt.trim()) {
+      setError('Please describe what you want to do with the image');
       return;
     }
 
@@ -161,54 +151,67 @@ Make each variation unique and compelling for social media.`
     try {
       const base64Image = imagePreview.split(',')[1];
       
-      const prompt = editMode === 'enhance' 
-        ? 'Describe this image in detail, including colors, composition, lighting, and suggest improvements for better quality.'
-        : editMode === 'remove' 
-        ? `Analyze this image and suggest how to ${editPrompt}. Describe what needs to be removed and how the image would look after.`
-        : editMode === 'add'
-        ? `Analyze this image and suggest how to ${editPrompt}. Describe how this addition would enhance the image.`
-        : `Describe what removing the background from this image would look like.`;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+      // Use search-and-replace for remove mode, otherwise use general editing
+      const endpoint = editMode === 'remove' 
+        ? 'https://api.stability.ai/v2beta/stable-image/edit/search-and-replace'
+        : 'https://api.stability.ai/v2beta/stable-image/generate/sd3';
+      
+      const formData = new FormData();
+      
+      // Convert base64 to blob
+      const byteString = atob(base64Image);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: 'image/jpeg' });
+      
+      if (editMode === 'remove') {
+        // Search and replace mode
+        formData.append('image', blob, 'image.jpg');
+        formData.append('prompt', editPrompt);
+        formData.append('search_prompt', editPrompt.replace(/remove|delete/gi, '').trim());
+        formData.append('output_format', 'png');
+      } else {
+        // Image-to-image generation mode
+        formData.append('image', blob, 'image.jpg');
+        formData.append('prompt', editPrompt);
+        formData.append('mode', 'image-to-image');
+        formData.append('output_format', 'png');
+        formData.append('strength', editMode === 'enhance' ? '0.35' : '0.5');
+      }
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${STABILITY_API_KEY}`,
+          'Accept': 'image/*'
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: base64Image
-                }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.4,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 2048,
-          }
-        })
+        body: formData
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || 'Image analysis failed');
+        const errorText = await response.text();
+        throw new Error(`API error (${response.status}): ${errorText}`);
       }
 
-      const data = await response.json();
-      const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const imageBlob = await response.blob();
+      
+      // Convert to base64 for display and history
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result;
+        setEditedImage(base64data);
+        setImageHistory(prev => [...prev, base64data]);
+      };
+      reader.readAsDataURL(imageBlob);
 
-      setImageAnalysis(analysis);
       setError('');
       
     } catch (err) {
-      setError(err.message || 'Failed to analyze image. Please try again.');
-      console.error('Image analysis error:', err);
+      setError(`Image editing failed: ${err.message}. Try a different edit mode or simpler prompt.`);
+      console.error('Image editing error:', err);
     } finally {
       setImageLoading(false);
     }
@@ -235,7 +238,6 @@ Make each variation unique and compelling for social media.`
     setEditedImage(null);
     setEditPrompt('');
     setImageHistory([]);
-    setImageAnalysis('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -457,39 +459,38 @@ Make each variation unique and compelling for social media.`
                       </div>
                     </div>
 
-                    {editMode !== 'enhance' && editMode !== 'background' && (
-                      <div className="mb-6">
-                        <label className="block text-slate-700 font-semibold mb-3">
-                          Describe Your Edit
-                        </label>
-                        <textarea
-                          value={editPrompt}
-                          onChange={(e) => setEditPrompt(e.target.value)}
-                          placeholder={
-                            editMode === 'remove' ? 'e.g., Remove the person in the background' :
-                            editMode === 'add' ? 'e.g., Add sunglasses, add sunset background' :
-                            'Describe what you want...'
-                          }
-                          className="w-full h-24 px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:outline-none focus:ring-4 focus:ring-cyan-200 resize-none"
-                          disabled={imageLoading}
-                        />
-                      </div>
-                    )}
+                    <div className="mb-6">
+                      <label className="block text-slate-700 font-semibold mb-3">
+                        Describe Your Edit
+                      </label>
+                      <textarea
+                        value={editPrompt}
+                        onChange={(e) => setEditPrompt(e.target.value)}
+                        placeholder={
+                          editMode === 'enhance' ? 'e.g., Enhance clarity, improve colors, remove noise' :
+                          editMode === 'remove' ? 'e.g., Remove the person in the background' :
+                          editMode === 'add' ? 'e.g., Add sunglasses, add sunset background' :
+                          'e.g., Replace background with beach sunset'
+                        }
+                        className="w-full h-24 px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:outline-none focus:ring-4 focus:ring-cyan-200 resize-none"
+                        disabled={imageLoading}
+                      />
+                    </div>
 
                     <button
-                      onClick={handleImageEdit}
-                      disabled={imageLoading}
+                      onClick={handleRealImageEdit}
+                      disabled={imageLoading || !editPrompt.trim()}
                       className="w-full py-4 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
                       {imageLoading ? (
                         <>
                           <RefreshCw className="w-5 h-5 animate-spin" />
-                          Analyzing...
+                          Editing Image...
                         </>
                       ) : (
                         <>
                           <Zap className="w-5 h-5" />
-                          Analyze Image with AI
+                          Apply AI Edit
                         </>
                       )}
                     </button>
@@ -500,49 +501,10 @@ Make each variation unique and compelling for social media.`
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                   <Sparkles className="w-6 h-6 text-indigo-500" />
-                  AI Analysis
+                  Edited Result
                 </h3>
 
-                {imageAnalysis ? (
-                  <div className="space-y-4">
-                    <div className="bg-gradient-to-br from-cyan-50 to-indigo-50 rounded-xl p-6 border border-cyan-200">
-                      <div className="flex items-start gap-3 mb-4">
-                        <Sparkles className="w-6 h-6 text-cyan-600 flex-shrink-0 mt-1" />
-                        <div>
-                          <h4 className="text-lg font-bold text-slate-800 mb-2">
-                            AI Vision Analysis
-                          </h4>
-                          <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                            {imageAnalysis}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="text-2xl">💡</div>
-                        <div className="flex-1">
-                          <h5 className="font-bold text-amber-900 mb-2">Important Note</h5>
-                          <p className="text-sm text-amber-800 leading-relaxed">
-                            This is an <strong>AI analysis and suggestions</strong> only. The Gemini API used here can analyze images and suggest improvements, but it <strong>cannot perform actual image editing</strong> (like removing objects, adding elements, or changing backgrounds).
-                          </p>
-                          <p className="text-sm text-amber-800 mt-2">
-                            For real image editing, you would need paid APIs like <strong>Stability AI</strong>, <strong>Replicate</strong>, or <strong>DALL-E</strong>.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setImageAnalysis('')}
-                      className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all"
-                    >
-                      <RefreshCw className="w-5 h-5" />
-                      Analyze Again
-                    </button>
-                  </div>
-                ) : editedImage ? (
+                {editedImage ? (
                   <>
                     <div className="mb-6">
                       <img
@@ -593,7 +555,7 @@ Make each variation unique and compelling for social media.`
                     <div className="text-center">
                       <Image className="w-16 h-16 mx-auto mb-4 text-slate-300" />
                       <p className="text-slate-500 font-medium">
-                        Upload an image and click "Analyze" to see AI suggestions
+                        Upload an image and apply AI edits to see results here
                       </p>
                     </div>
                   </div>
@@ -604,24 +566,28 @@ Make each variation unique and compelling for social media.`
             <div className="mt-6 bg-gradient-to-r from-cyan-50 to-indigo-50 rounded-2xl p-6 border border-cyan-200">
               <h4 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-cyan-600" />
-                About Image Analysis
+                Real AI Image Editing
               </h4>
               <ul className="space-y-2 text-slate-700 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-cyan-600 font-bold">•</span>
-                  <span><strong>AI Vision:</strong> Gemini 2.0 Flash Lite analyzes your image and suggests improvements</span>
+                  <span><strong>Real Editing:</strong> Powered by Stability AI - actually edits your images!</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-indigo-600 font-bold">•</span>
-                  <span><strong>Free Models:</strong> Using Gemini 2.0 Flash Lite (fast & free)</span>
+                  <span><strong>Remove Objects:</strong> Remove unwanted people, objects, or blemishes</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-pink-600 font-bold">•</span>
-                  <span><strong>Note:</strong> This analyzes images but doesn't edit them (requires paid APIs)</span>
+                  <span><strong>Add Elements:</strong> Add sunglasses, makeup, effects, or new objects</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-600 font-bold">•</span>
-                  <span><strong>Text improvement:</strong> Works perfectly with Gemini - try it now!</span>
+                  <span><strong>Change Backgrounds:</strong> Replace or remove backgrounds completely</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-600 font-bold">•</span>
+                  <span><strong>Setup:</strong> Add VITE_STABILITY_API_KEY to your .env file from https://platform.stability.ai/</span>
                 </li>
               </ul>
             </div>

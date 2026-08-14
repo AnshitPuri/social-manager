@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@splinetool/react-spline": "^4.1.0",
     "@tailwindcss/vite": "^4.1.17",
     "clsx": "^2.1.1",
     "firebase": "^12.5.0",
@@ -9,9 +10,7 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.9.5",
     "recharts": "^3.3.0",
-    "tailwind-merge": "^3.3.1",
-    "content": "Hello world",
-    "tone": "friendly"
+    "tailwind-merge": "^3.3.1"
   },
   "name": "postwise-frontend",
   "version": "1.0.0",

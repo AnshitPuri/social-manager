@@ -38,8 +38,7 @@ router.post('/recycle', authenticateToken, async (req, res) => {
 
 // Helper function to fetch post data
 async function fetchPostData(postUrl) {
-  // Parse URL and fetch from appropriate social media API
-  // or your database
+
   return {
     caption: "...",
     engagement: { likes: 0, comments: 0, shares: 0 },
